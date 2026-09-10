@@ -17,6 +17,105 @@ model Department {
   name String @unique
   code String @unique
 
+  users      User[]
+  placements ClinicalPlacement[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model Role {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  users       User[]
+  permissions RolePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Permission {
+  id          String  @id @default(cuid())
+  key         String  @unique
+  description String?
+
+  roles RolePermission[]
+
+  createdAt DateTime @default(now())
+}
+
+model RolePermission {
+  id String @id @default(cuid())
+
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  fullName     String
+  status       UserStatus @default(ACTIVE)
+
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  placementsAsStudent    ClinicalPlacement[] @relation("StudentPlacements")
+  placementsAsSupervisor ClinicalPlacement[] @relation("SupervisorPlacements")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roleId])
+  @@index([departmentId])
+}
+
+enum PlacementStatus {
+  UPCOMING
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  EXTENDED
+}
+
+model ClinicalPlacement {
+  id           String  @id @default(cuid())
+  clinicalArea String?
+
+  studentId String
+  student   User   @relation("StudentPlacements", fields: [studentId], references: [id], onDelete: Cascade)
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  supervisorId String?
+  supervisor   User?   @relation("SupervisorPlacements", fields: [supervisorId], references: [id])
+
+  startDate DateTime
+  endDate   DateTime
+  status    PlacementStatus @default(UPCOMING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([status])
+  @@index([startDate, endDate])
 }
