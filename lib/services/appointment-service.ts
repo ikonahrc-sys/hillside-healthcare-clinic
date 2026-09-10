@@ -47,6 +47,19 @@ export async function scheduleFollowUp(
   return appointment;
 }
 
+export async function listAppointmentsForPatient(
+  user: CurrentUser | null,
+  patientId: string,
+) {
+  await authorize(user, "patient:read");
+
+  return prisma.appointment.findMany({
+    where: { patientId },
+    include: { staff: { select: { fullName: true } } },
+    orderBy: { scheduledAt: "desc" },
+  });
+}
+
 const scheduleInclude = {
   patient: { select: { id: true, firstName: true, lastName: true, mrnNumber: true } },
   staff: { select: { fullName: true } },
