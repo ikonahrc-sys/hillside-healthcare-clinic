@@ -25,12 +25,20 @@ export default async function PrescriptionQueuePage() {
         <h1 className="text-lg font-semibold text-slate-900">
           Prescription Queue
         </h1>
-        <Link
-          href="/pharmacy/inventory"
-          className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700"
-        >
-          Inventory
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/pharmacy"
+            className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700"
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/pharmacy/inventory"
+            className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700"
+          >
+            Inventory
+          </Link>
+        </div>
       </div>
 
       {prescriptions.length === 0 ? (
