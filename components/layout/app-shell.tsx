@@ -6,10 +6,12 @@ import type { CurrentUser } from "@/lib/auth/session";
 export function AppShell({
   user,
   canManagePlacements,
+  canManageClinicalPrep,
   children,
 }: {
   user: CurrentUser;
   canManagePlacements: boolean;
+  canManageClinicalPrep: boolean;
   children: ReactNode;
 }) {
   return (
@@ -20,7 +22,10 @@ export function AppShell({
             Hillside Healthcare Clinic
           </p>
         </div>
-        <Nav canManagePlacements={canManagePlacements} />
+        <Nav
+          canManagePlacements={canManagePlacements}
+          canManageClinicalPrep={canManageClinicalPrep}
+        />
       </aside>
 
       <div className="flex flex-1 flex-col">

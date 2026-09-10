@@ -17,6 +17,7 @@ const PERMISSIONS = [
   { key: "homenursing:manage", description: "Create home nursing assessments and care plans" },
   { key: "user:manage", description: "Create/edit user accounts and roles" },
   { key: "placement:manage", description: "Manage student clinical placements" },
+  { key: "clinical-prep:manage", description: "Create and view your own clinical preparation notes" },
 ] as const;
 
 const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
@@ -39,11 +40,16 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   SPEECH_THERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
   OCCUPATIONAL_THERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
   HOME_NURSING_STAFF: ["patient:read", "referral:manage", "homenursing:manage", "appointment:manage"],
-  // Read-only, deliberately - a student's access to write into official
-  // documentation is a separate, larger piece of Phase 6 not built yet.
-  // What they CAN see is further scoped to their placement's department
-  // at query time (see listPatientsForStudent), not expressed here.
-  STUDENT: ["patient:read"],
+  // patient:read is broad on purpose - which patients actually come into
+  // view is scoped to the student's active placement department at query
+  // time (see listPatientsForStudent), not expressed here. Authoring
+  // official records (rehab:manage/homenursing:manage-gated create
+  // actions) doesn't come from a permission grant either - see
+  // authorizeClinicalAuthor, which lets a student with a matching active
+  // placement through regardless of their own permission set, flagged
+  // pending co-sign. clinical-prep:manage is different: prep notes are
+  // never official, so it's a real permission grant like any other.
+  STUDENT: ["patient:read", "clinical-prep:manage"],
 };
 
 // Dev-only test accounts, one per role, so every phase can be tested as the

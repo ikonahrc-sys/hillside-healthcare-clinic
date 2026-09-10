@@ -17,17 +17,33 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { label: "Settings" },
 ];
 
-export function Nav({ canManagePlacements }: { canManagePlacements: boolean }) {
+export function Nav({
+  canManagePlacements,
+  canManageClinicalPrep,
+}: {
+  canManagePlacements: boolean;
+  canManageClinicalPrep: boolean;
+}) {
   // "Placements" is inserted next to "Users & Roles" rather than added to
   // the static list unconditionally - it's real and permission-gated, the
-  // rest are still placeholders for later phases.
-  const items: NavItem[] = canManagePlacements
+  // rest are still placeholders for later phases. "Clinical Preparation"
+  // is already in the static list as a placeholder, so it just needs its
+  // href filled in once the feature exists.
+  let items: NavItem[] = canManagePlacements
     ? [
         ...BASE_NAV_ITEMS.slice(0, -2),
         { label: "Placements", href: "/placements" },
         ...BASE_NAV_ITEMS.slice(-2),
       ]
     : BASE_NAV_ITEMS;
+
+  if (canManageClinicalPrep) {
+    items = items.map((item) =>
+      item.label === "Clinical Preparation"
+        ? { ...item, href: "/clinical-preparation" }
+        : item,
+    );
+  }
 
   return (
     <nav className="flex flex-col gap-1 p-3">

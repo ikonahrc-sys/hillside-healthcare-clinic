@@ -103,6 +103,7 @@ model User {
   homeNursingCarePlansCoSigned HomeNursingCarePlan[] @relation("HomeNursingCarePlanCoSigner")
   homeVisits             HomeVisit[]            @relation("HomeVisitNurse")
   homeVisitsCoSigned     HomeVisit[]            @relation("HomeVisitCoSigner")
+  clinicalPreparationNotes ClinicalPreparationNote[] @relation("ClinicalPreparationNoteStudent")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -219,6 +220,7 @@ model Patient {
   homeNursingAssessments HomeNursingAssessment[]
   homeNursingCarePlans   HomeNursingCarePlan[]
   homeVisits             HomeVisit[]
+  clinicalPreparationNotes ClinicalPreparationNote[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -776,4 +778,28 @@ model HomeVisit {
   @@index([carePlanId])
   @@index([patientId])
   @@index([nurseId])
+}
+
+// A student's own study/prep notes on a patient - deliberately NOT part
+// of the official clinical record (unlike a co-signed assessment, these
+// never graduate into official documentation). Private to the student
+// who wrote them: no co-sign, no visibility to supervisors or other
+// staff, no editing after creation (same append-only pattern as every
+// other clinical record in this app).
+model ClinicalPreparationNote {
+  id String @id @default(cuid())
+
+  studentId String
+  student   User   @relation("ClinicalPreparationNoteStudent", fields: [studentId], references: [id])
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  content String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([patientId])
 }

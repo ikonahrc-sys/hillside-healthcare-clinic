@@ -15,9 +15,14 @@ export default async function AppLayout({
   }
 
   const canManagePlacements = await can(user, "placement:manage");
+  const canManageClinicalPrep = await can(user, "clinical-prep:manage");
 
   return (
-    <AppShell user={user} canManagePlacements={canManagePlacements}>
+    <AppShell
+      user={user}
+      canManagePlacements={canManagePlacements}
+      canManageClinicalPrep={canManageClinicalPrep}
+    >
       {children}
     </AppShell>
   );
