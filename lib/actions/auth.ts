@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession, destroySession } from "@/lib/auth/session";
+import { hasActivePlacement } from "@/lib/auth/placement";
 
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -46,20 +47,14 @@ export async function loginAction(
     return { error: "This account is not active. Contact an administrator." };
   }
 
-  if (user.role.name === "STUDENT") {
-    const now = new Date();
-    const hasActivePlacement = user.placementsAsStudent.some(
-      (placement) =>
-        (placement.status === "ACTIVE" || placement.status === "EXTENDED") &&
-        placement.startDate <= now &&
-        placement.endDate >= now,
-    );
-    if (!hasActivePlacement) {
-      return {
-        error:
-          "No active clinical placement found. Access is only available during an active placement.",
-      };
-    }
+  if (
+    user.role.name === "STUDENT" &&
+    !hasActivePlacement(user.placementsAsStudent)
+  ) {
+    return {
+      error:
+        "No active clinical placement found. Access is only available during an active placement.",
+    };
   }
 
   await createSession(user.id);

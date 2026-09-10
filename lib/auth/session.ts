@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
+import { hasActivePlacement } from "@/lib/auth/placement";
 
 const SESSION_COOKIE_NAME = "hillside_session";
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
@@ -76,17 +77,8 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     return null;
   }
 
-  if (user.role.name === "STUDENT") {
-    const now = new Date();
-    const hasActivePlacement = user.placementsAsStudent.some(
-      (placement) =>
-        (placement.status === "ACTIVE" || placement.status === "EXTENDED") &&
-        placement.startDate <= now &&
-        placement.endDate >= now,
-    );
-    if (!hasActivePlacement) {
-      return null;
-    }
+  if (user.role.name === "STUDENT" && !hasActivePlacement(user.placementsAsStudent)) {
+    return null;
   }
 
   return {
