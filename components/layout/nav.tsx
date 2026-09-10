@@ -11,7 +11,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Home Nursing" },
   { label: "Appointments" },
   { label: "Clinical Preparation" },
-  { label: "Referrals" },
+  { label: "Referrals", href: "/referrals" },
   { label: "Reports" },
   { label: "Users & Roles" },
   { label: "Settings" },

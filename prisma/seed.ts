@@ -17,7 +17,7 @@ const PERMISSIONS = [
 const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   ADMINISTRATOR: PERMISSIONS.map((p) => p.key),
   DOCTOR: ["patient:read", "patient:write", "consultation:create", "referral:manage"],
-  PHARMACIST: ["patient:read", "prescription:dispense"],
+  PHARMACIST: ["patient:read", "prescription:dispense", "referral:manage"],
 };
 
 // Dev-only test accounts, one per role, so every phase can be tested as the

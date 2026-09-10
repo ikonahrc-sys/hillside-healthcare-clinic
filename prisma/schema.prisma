@@ -20,6 +20,9 @@ model Department {
   users      User[]
   placements ClinicalPlacement[]
 
+  referralsSent     Referral[] @relation("ReferralFromDepartment")
+  referralsReceived Referral[] @relation("ReferralToDepartment")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -81,6 +84,8 @@ model User {
   placementsAsSupervisor ClinicalPlacement[] @relation("SupervisorPlacements")
   sessions               Session[]
   consultationsAsDoctor  Consultation[]      @relation("DoctorConsultations")
+  referralsMade          Referral[]          @relation("ReferringUser")
+  referralsResponded     Referral[]          @relation("RespondingUser")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -188,6 +193,7 @@ model Patient {
 
   consultations Consultation[]
   diagnoses     Diagnosis[]
+  referrals     Referral[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -219,6 +225,7 @@ model Consultation {
 
   vitals    VitalSigns?
   diagnoses Diagnosis[]
+  referrals Referral[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -267,4 +274,48 @@ model Diagnosis {
 
   @@index([patientId])
   @@index([consultationId])
+}
+
+enum ReferralStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model Referral {
+  id String @id @default(cuid())
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  fromDepartmentId String
+  fromDepartment   Department @relation("ReferralFromDepartment", fields: [fromDepartmentId], references: [id])
+
+  toDepartmentId String
+  toDepartment   Department @relation("ReferralToDepartment", fields: [toDepartmentId], references: [id])
+
+  referringUserId String
+  referringUser   User   @relation("ReferringUser", fields: [referringUserId], references: [id])
+
+  // Optional - not every referral has to originate from a documented
+  // consultation, so this stays nullable rather than forced.
+  consultationId String?
+  consultation   Consultation? @relation(fields: [consultationId], references: [id])
+
+  reason String
+  status ReferralStatus @default(PENDING)
+
+  respondedByUserId String?
+  respondedByUser   User?     @relation("RespondingUser", fields: [respondedByUserId], references: [id])
+  respondedAt       DateTime?
+  responseNotes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([toDepartmentId, status])
+  @@index([status])
 }
