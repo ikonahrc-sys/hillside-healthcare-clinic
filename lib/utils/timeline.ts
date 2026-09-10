@@ -121,12 +121,13 @@ export function buildPatientTimeline(data: {
   }
 
   for (const s of data.therapySessions) {
+    const pendingCoSign = s.therapist.role.name === "STUDENT" && !s.coSignedAt;
     entries.push({
       id: s.id,
       date: s.sessionDate,
       type: "therapySession",
       title: "Therapy session",
-      subtitle: `Rehabilitation - ${s.therapist.fullName}`,
+      subtitle: `Rehabilitation - ${s.therapist.fullName}${pendingCoSign ? " (pending co-sign)" : ""}`,
       isUpcoming: false,
     });
   }

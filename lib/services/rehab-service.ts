@@ -20,7 +20,9 @@ export async function listRehabAssessmentsForPatient(
     where: { patientId },
     include: {
       therapist: { select: { fullName: true, role: { select: { name: true } } } },
-      treatmentPlan: true,
+      treatmentPlan: {
+        include: { therapist: { select: { role: { select: { name: true } } } } },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -40,8 +42,13 @@ export async function getRehabAssessment(
       coSignedBy: { select: { fullName: true } },
       treatmentPlan: {
         include: {
+          therapist: { select: { fullName: true, role: { select: { name: true } } } },
+          coSignedBy: { select: { fullName: true } },
           therapySessions: {
-            include: { therapist: { select: { fullName: true } } },
+            include: {
+              therapist: { select: { fullName: true, role: { select: { name: true } } } },
+              coSignedBy: { select: { fullName: true } },
+            },
             orderBy: { sessionDate: "desc" },
           },
         },
@@ -137,7 +144,11 @@ export async function createTreatmentPlan(
   assessmentId: string,
   input: RehabTreatmentPlanInput,
 ) {
-  const authedUser = await authorize(user, "rehab:manage");
+  const { authedUser, requiresCoSign } = await authorizeClinicalAuthor(
+    user,
+    "rehab:manage",
+    "REHAB",
+  );
 
   const assessment = await prisma.rehabAssessment.findUnique({
     where: { id: assessmentId },
@@ -171,10 +182,47 @@ export async function createTreatmentPlan(
     action: "REHAB_TREATMENT_PLAN_CREATE",
     entityType: "RehabTreatmentPlan",
     entityId: plan.id,
-    metadata: { patientId: assessment.patientId, assessmentId: assessment.id },
+    metadata: { patientId: assessment.patientId, assessmentId: assessment.id, studentAuthored: requiresCoSign },
   });
 
   return plan;
+}
+
+export async function coSignTreatmentPlan(
+  user: CurrentUser | null,
+  treatmentPlanId: string,
+) {
+  const authedUser = await authorize(user, "rehab:manage");
+
+  const plan = await prisma.rehabTreatmentPlan.findUnique({
+    where: { id: treatmentPlanId },
+    include: { therapist: { select: { role: { select: { name: true } } } } },
+  });
+  if (!plan) {
+    throw new Error("Treatment plan not found");
+  }
+  if (plan.therapist.role.name !== "STUDENT") {
+    throw new Error("This treatment plan does not require a co-sign.");
+  }
+  if (plan.coSignedAt) {
+    throw new Error("This treatment plan has already been co-signed.");
+  }
+
+  const updated = await prisma.rehabTreatmentPlan.update({
+    where: { id: plan.id },
+    data: { coSignedByUserId: authedUser.id, coSignedAt: new Date() },
+  });
+
+  await logAudit({
+    actorId: authedUser.id,
+    actorEmail: authedUser.email,
+    action: "REHAB_TREATMENT_PLAN_COSIGN",
+    entityType: "RehabTreatmentPlan",
+    entityId: plan.id,
+    metadata: { patientId: plan.patientId, studentTherapistId: plan.therapistId },
+  });
+
+  return updated;
 }
 
 export async function logTherapySession(
@@ -182,7 +230,11 @@ export async function logTherapySession(
   treatmentPlanId: string,
   input: TherapySessionInput,
 ) {
-  const authedUser = await authorize(user, "rehab:manage");
+  const { authedUser, requiresCoSign } = await authorizeClinicalAuthor(
+    user,
+    "rehab:manage",
+    "REHAB",
+  );
 
   const plan = await prisma.rehabTreatmentPlan.findUnique({
     where: { id: treatmentPlanId },
@@ -208,10 +260,47 @@ export async function logTherapySession(
     action: "THERAPY_SESSION_LOG",
     entityType: "TherapySession",
     entityId: session.id,
-    metadata: { patientId: plan.patientId, treatmentPlanId: plan.id },
+    metadata: { patientId: plan.patientId, treatmentPlanId: plan.id, studentAuthored: requiresCoSign },
   });
 
   return session;
+}
+
+export async function coSignTherapySession(
+  user: CurrentUser | null,
+  sessionId: string,
+) {
+  const authedUser = await authorize(user, "rehab:manage");
+
+  const session = await prisma.therapySession.findUnique({
+    where: { id: sessionId },
+    include: { therapist: { select: { role: { select: { name: true } } } } },
+  });
+  if (!session) {
+    throw new Error("Therapy session not found");
+  }
+  if (session.therapist.role.name !== "STUDENT") {
+    throw new Error("This therapy session does not require a co-sign.");
+  }
+  if (session.coSignedAt) {
+    throw new Error("This therapy session has already been co-signed.");
+  }
+
+  const updated = await prisma.therapySession.update({
+    where: { id: session.id },
+    data: { coSignedByUserId: authedUser.id, coSignedAt: new Date() },
+  });
+
+  await logAudit({
+    actorId: authedUser.id,
+    actorEmail: authedUser.email,
+    action: "THERAPY_SESSION_COSIGN",
+    entityType: "TherapySession",
+    entityId: session.id,
+    metadata: { patientId: session.patientId, studentTherapistId: session.therapistId },
+  });
+
+  return updated;
 }
 
 export async function listTherapySessionsForPatient(
@@ -222,7 +311,7 @@ export async function listTherapySessionsForPatient(
 
   return prisma.therapySession.findMany({
     where: { patientId },
-    include: { therapist: { select: { fullName: true } } },
+    include: { therapist: { select: { fullName: true, role: { select: { name: true } } } } },
     orderBy: { sessionDate: "desc" },
   });
 }

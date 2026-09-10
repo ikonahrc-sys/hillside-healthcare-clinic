@@ -94,7 +94,9 @@ model User {
   rehabAssessments       RehabAssessment[]      @relation("RehabAssessmentTherapist")
   rehabAssessmentsCoSigned RehabAssessment[]    @relation("RehabAssessmentCoSigner")
   rehabTreatmentPlans    RehabTreatmentPlan[]   @relation("RehabTreatmentPlanTherapist")
+  rehabTreatmentPlansCoSigned RehabTreatmentPlan[] @relation("RehabTreatmentPlanCoSigner")
   therapySessions        TherapySession[]       @relation("TherapySessionTherapist")
+  therapySessionsCoSigned TherapySession[]      @relation("TherapySessionCoSigner")
   homeNursingAssessments HomeNursingAssessment[] @relation("HomeNursingAssessmentNurse")
   homeNursingCarePlans   HomeNursingCarePlan[]  @relation("HomeNursingCarePlanNurse")
   homeVisits             HomeVisit[]            @relation("HomeVisitNurse")
@@ -605,6 +607,12 @@ model RehabTreatmentPlan {
   therapistId String
   therapist   User   @relation("RehabTreatmentPlanTherapist", fields: [therapistId], references: [id])
 
+  // Same co-sign shape as RehabAssessment.coSignedByUserId/coSignedAt -
+  // see the comment there.
+  coSignedByUserId String?
+  coSignedBy       User?     @relation("RehabTreatmentPlanCoSigner", fields: [coSignedByUserId], references: [id])
+  coSignedAt       DateTime?
+
   goals       String
   frequency   String
   reviewDate  DateTime?
@@ -636,6 +644,12 @@ model TherapySession {
 
   therapistId String
   therapist   User   @relation("TherapySessionTherapist", fields: [therapistId], references: [id])
+
+  // Same co-sign shape as RehabAssessment.coSignedByUserId/coSignedAt -
+  // see the comment there.
+  coSignedByUserId String?
+  coSignedBy       User?     @relation("TherapySessionCoSigner", fields: [coSignedByUserId], references: [id])
+  coSignedAt       DateTime?
 
   sessionDate DateTime @default(now())
 

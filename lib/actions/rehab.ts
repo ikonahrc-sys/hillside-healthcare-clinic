@@ -12,6 +12,8 @@ import {
   createTreatmentPlan,
   logTherapySession,
   coSignRehabAssessment,
+  coSignTreatmentPlan,
+  coSignTherapySession,
 } from "@/lib/services/rehab-service";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AuthorizationError } from "@/lib/auth/authorize";
@@ -104,6 +106,41 @@ export async function coSignRehabAssessmentAction(formData: FormData) {
     // Most likely a race (someone else already co-signed) or a permission
     // edge case - revalidating below shows the current real state rather
     // than crashing to an error page.
+  } finally {
+    revalidatePath(`/rehab-assessments/${assessmentId}`);
+  }
+}
+
+export async function coSignTreatmentPlanAction(formData: FormData) {
+  const assessmentId = formData.get("assessmentId");
+  const treatmentPlanId = formData.get("treatmentPlanId");
+  if (typeof assessmentId !== "string" || typeof treatmentPlanId !== "string") {
+    return;
+  }
+
+  const user = await getCurrentUser();
+  try {
+    await coSignTreatmentPlan(user, treatmentPlanId);
+  } catch {
+    // Most likely a race or a permission edge case - revalidating below
+    // shows the current real state rather than crashing to an error page.
+  } finally {
+    revalidatePath(`/rehab-assessments/${assessmentId}`);
+  }
+}
+
+export async function coSignTherapySessionAction(formData: FormData) {
+  const assessmentId = formData.get("assessmentId");
+  const sessionId = formData.get("sessionId");
+  if (typeof assessmentId !== "string" || typeof sessionId !== "string") {
+    return;
+  }
+
+  const user = await getCurrentUser();
+  try {
+    await coSignTherapySession(user, sessionId);
+  } catch {
+    // Same reasoning as coSignTreatmentPlanAction.
   } finally {
     revalidatePath(`/rehab-assessments/${assessmentId}`);
   }

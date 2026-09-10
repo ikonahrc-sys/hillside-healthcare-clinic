@@ -4,7 +4,12 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getRehabAssessment } from "@/lib/services/rehab-service";
 import { formatMrn } from "@/lib/services/patient-service";
 import { can } from "@/lib/auth/authorize";
-import { coSignRehabAssessmentAction } from "@/lib/actions/rehab";
+import { canAuthorClinicalRecord } from "@/lib/auth/clinical-author";
+import {
+  coSignRehabAssessmentAction,
+  coSignTreatmentPlanAction,
+  coSignTherapySessionAction,
+} from "@/lib/actions/rehab";
 import { NewTreatmentPlanForm } from "@/components/rehab/new-treatment-plan-form";
 import { LogTherapySessionForm } from "@/components/rehab/log-therapy-session-form";
 
@@ -28,8 +33,13 @@ export default async function RehabAssessmentPage({
   }
 
   const canManage = user ? await can(user, "rehab:manage") : false;
+  const canAuthor = await canAuthorClinicalRecord(user, "rehab:manage", "REHAB");
   const isPendingCoSign =
     assessment.therapist.role.name === "STUDENT" && !assessment.coSignedAt;
+  const isPlanPendingCoSign =
+    assessment.treatmentPlan &&
+    assessment.treatmentPlan.therapist.role.name === "STUDENT" &&
+    !assessment.treatmentPlan.coSignedAt;
 
   return (
     <div>
@@ -121,6 +131,30 @@ export default async function RehabAssessmentPage({
           Treatment Plan
         </h2>
 
+        {isPlanPendingCoSign && (
+          <div className="mb-3 flex items-center justify-between rounded border border-red-200 bg-red-50 p-3">
+            <p className="text-sm text-red-800">
+              Student-authored - pending supervisor co-sign.
+            </p>
+            {canManage && (
+              <form action={coSignTreatmentPlanAction}>
+                <input type="hidden" name="assessmentId" value={assessment.id} />
+                <input
+                  type="hidden"
+                  name="treatmentPlanId"
+                  value={assessment.treatmentPlan!.id}
+                />
+                <button
+                  type="submit"
+                  className="rounded bg-red-700 px-3 py-1.5 text-xs font-medium text-white"
+                >
+                  Co-sign
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+
         {assessment.treatmentPlan ? (
           <dl className="flex flex-col gap-2 text-sm">
             <div>
@@ -158,8 +192,14 @@ export default async function RehabAssessmentPage({
             <span className="w-fit rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
               {assessment.treatmentPlan.status}
             </span>
+            {assessment.treatmentPlan.coSignedAt && assessment.treatmentPlan.coSignedBy && (
+              <p className="text-xs text-slate-500">
+                Co-signed by {assessment.treatmentPlan.coSignedBy.fullName} on{" "}
+                {assessment.treatmentPlan.coSignedAt.toDateString()}
+              </p>
+            )}
           </dl>
-        ) : canManage ? (
+        ) : canAuthor ? (
           <NewTreatmentPlanForm assessmentId={assessment.id} />
         ) : (
           <p className="text-sm text-slate-500">No treatment plan yet.</p>
@@ -174,27 +214,55 @@ export default async function RehabAssessmentPage({
 
           {assessment.treatmentPlan.therapySessions.length > 0 && (
             <ul className="mb-4 flex flex-col gap-3">
-              {assessment.treatmentPlan.therapySessions.map((s) => (
-                <li
-                  key={s.id}
-                  className="border-t border-slate-100 pt-3 first:border-t-0 first:pt-0"
-                >
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-xs font-medium text-slate-400">
-                      {s.sessionDate.toDateString()} - {s.therapist.fullName}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-slate-700">{s.activities}</p>
-                  {s.progress && (
-                    <p className="mt-1 text-sm text-slate-600">
-                      Progress: {s.progress}
-                    </p>
-                  )}
-                  {s.notes && (
-                    <p className="mt-1 text-sm text-slate-500">{s.notes}</p>
-                  )}
-                </li>
-              ))}
+              {assessment.treatmentPlan.therapySessions.map((s) => {
+                const sessionPendingCoSign =
+                  s.therapist.role.name === "STUDENT" && !s.coSignedAt;
+                return (
+                  <li
+                    key={s.id}
+                    className="border-t border-slate-100 pt-3 first:border-t-0 first:pt-0"
+                  >
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-xs font-medium text-slate-400">
+                        {s.sessionDate.toDateString()} - {s.therapist.fullName}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-700">{s.activities}</p>
+                    {s.progress && (
+                      <p className="mt-1 text-sm text-slate-600">
+                        Progress: {s.progress}
+                      </p>
+                    )}
+                    {s.notes && (
+                      <p className="mt-1 text-sm text-slate-500">{s.notes}</p>
+                    )}
+                    {sessionPendingCoSign && (
+                      <div className="mt-2 flex items-center justify-between rounded border border-red-200 bg-red-50 p-2">
+                        <span className="text-xs text-red-800">
+                          Student-authored - pending co-sign
+                        </span>
+                        {canManage && (
+                          <form action={coSignTherapySessionAction}>
+                            <input type="hidden" name="assessmentId" value={assessment.id} />
+                            <input type="hidden" name="sessionId" value={s.id} />
+                            <button
+                              type="submit"
+                              className="rounded bg-red-700 px-2 py-1 text-xs font-medium text-white"
+                            >
+                              Co-sign
+                            </button>
+                          </form>
+                        )}
+                      </div>
+                    )}
+                    {s.coSignedAt && s.coSignedBy && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        Co-signed by {s.coSignedBy.fullName} on {s.coSignedAt.toDateString()}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
 
@@ -202,7 +270,7 @@ export default async function RehabAssessmentPage({
             <p className="mb-4 text-sm text-slate-500">No sessions logged yet.</p>
           )}
 
-          {canManage && (
+          {canAuthor && (
             <LogTherapySessionForm
               assessmentId={assessment.id}
               treatmentPlanId={assessment.treatmentPlan.id}

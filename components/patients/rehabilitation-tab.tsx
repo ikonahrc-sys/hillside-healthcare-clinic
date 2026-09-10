@@ -45,41 +45,52 @@ export function RehabilitationTab({
         <p className="text-sm text-slate-500">No rehabilitation assessments yet.</p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {assessments.map((a) => (
-            <li
-              key={a.id}
-              className="border-t border-slate-100 pt-3 first:border-t-0 first:pt-0"
-            >
-              <div className="flex items-baseline justify-between">
-                <Link
-                  href={`/rehab-assessments/${a.id}`}
-                  className="text-sm font-medium text-slate-900 hover:underline"
-                >
-                  {DISCIPLINE_LABELS[a.discipline]}
-                </Link>
-                <span className="text-xs text-slate-400">
-                  {a.createdAt.toDateString()} - {a.therapist.fullName}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-slate-600">{a.findings}</p>
-              <div className="mt-1 flex flex-wrap gap-2">
-                {a.therapist.role.name === "STUDENT" && !a.coSignedAt && (
-                  <span className="inline-block rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
-                    Pending co-sign
+          {assessments.map((a) => {
+            const planPendingCoSign =
+              a.treatmentPlan &&
+              a.treatmentPlan.therapist.role.name === "STUDENT" &&
+              !a.treatmentPlan.coSignedAt;
+            return (
+              <li
+                key={a.id}
+                className="border-t border-slate-100 pt-3 first:border-t-0 first:pt-0"
+              >
+                <div className="flex items-baseline justify-between">
+                  <Link
+                    href={`/rehab-assessments/${a.id}`}
+                    className="text-sm font-medium text-slate-900 hover:underline"
+                  >
+                    {DISCIPLINE_LABELS[a.discipline]}
+                  </Link>
+                  <span className="text-xs text-slate-400">
+                    {a.createdAt.toDateString()} - {a.therapist.fullName}
                   </span>
-                )}
-                {a.treatmentPlan ? (
-                  <span className="inline-block rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-                    Treatment plan active
-                  </span>
-                ) : (
-                  <span className="inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                    No treatment plan yet
-                  </span>
-                )}
-              </div>
-            </li>
-          ))}
+                </div>
+                <p className="mt-1 text-sm text-slate-600">{a.findings}</p>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {a.therapist.role.name === "STUDENT" && !a.coSignedAt && (
+                    <span className="inline-block rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                      Pending co-sign
+                    </span>
+                  )}
+                  {a.treatmentPlan ? (
+                    <span className="inline-block rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                      Treatment plan active
+                    </span>
+                  ) : (
+                    <span className="inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                      No treatment plan yet
+                    </span>
+                  )}
+                  {planPendingCoSign && (
+                    <span className="inline-block rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                      Plan pending co-sign
+                    </span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
