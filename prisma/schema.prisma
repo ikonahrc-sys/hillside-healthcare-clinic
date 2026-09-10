@@ -20,8 +20,9 @@ model Department {
   users      User[]
   placements ClinicalPlacement[]
 
-  referralsSent     Referral[] @relation("ReferralFromDepartment")
-  referralsReceived Referral[] @relation("ReferralToDepartment")
+  referralsSent     Referral[]    @relation("ReferralFromDepartment")
+  referralsReceived Referral[]    @relation("ReferralToDepartment")
+  appointments      Appointment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -87,6 +88,7 @@ model User {
   referralsMade          Referral[]          @relation("ReferringUser")
   referralsResponded     Referral[]          @relation("RespondingUser")
   prescriptionsWritten   Prescription[]      @relation("PrescribingUser")
+  appointmentsAsStaff    Appointment[]       @relation("StaffAppointments")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -196,6 +198,7 @@ model Patient {
   diagnoses     Diagnosis[]
   referrals     Referral[]
   prescriptions Prescription[]
+  appointments  Appointment[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -390,4 +393,48 @@ model PrescriptionItem {
   createdAt DateTime @default(now())
 
   @@index([prescriptionId])
+}
+
+// Only MEDICAL_FOLLOW_UP exists for now - PHYSIOTHERAPY, SPEECH_THERAPY,
+// OCCUPATIONAL_THERAPY, and HOME_NURSING_VISIT get added when those
+// departments' real scheduling workflows are built in Phase 4/5, not
+// speculatively now.
+enum AppointmentType {
+  MEDICAL_FOLLOW_UP
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  RESCHEDULED
+}
+
+model Appointment {
+  id String @id @default(cuid())
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  staffId String
+  staff   User   @relation("StaffAppointments", fields: [staffId], references: [id])
+
+  type        AppointmentType
+  scheduledAt DateTime
+  status      AppointmentStatus @default(SCHEDULED)
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([departmentId, scheduledAt])
+  @@index([patientId])
+  @@index([staffId])
+  @@index([status])
 }

@@ -11,6 +11,7 @@ const PERMISSIONS = [
   { key: "prescription:create", description: "Write a prescription" },
   { key: "prescription:dispense", description: "Dispense a prescription" },
   { key: "referral:manage", description: "Create, accept, or decline referrals" },
+  { key: "appointment:manage", description: "Schedule and view scheduled appointments" },
   { key: "user:manage", description: "Create/edit user accounts and roles" },
   { key: "placement:manage", description: "Manage student clinical placements" },
 ] as const;
@@ -23,6 +24,7 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     "consultation:create",
     "prescription:create",
     "referral:manage",
+    "appointment:manage",
   ],
   PHARMACIST: ["patient:read", "prescription:dispense", "referral:manage"],
 };

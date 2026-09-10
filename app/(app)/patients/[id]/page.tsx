@@ -39,6 +39,7 @@ export default async function PatientDetailPage({
     canCreateConsultation,
     canManageReferrals,
     canCreatePrescription,
+    canManageAppointments,
   ] = await Promise.all([
     listConsultationsForPatient(user, patient.id),
     listReferralsForPatient(user, patient.id),
@@ -46,6 +47,7 @@ export default async function PatientDetailPage({
     user ? can(user, "consultation:create") : Promise.resolve(false),
     user ? can(user, "referral:manage") : Promise.resolve(false),
     user ? can(user, "prescription:create") : Promise.resolve(false),
+    user ? can(user, "appointment:manage") : Promise.resolve(false),
   ]);
 
   return (
@@ -97,14 +99,24 @@ export default async function PatientDetailPage({
           <h2 className="text-sm font-semibold text-slate-700">
             Consultations
           </h2>
-          {canCreateConsultation && (
-            <Link
-              href={`/patients/${patient.id}/consultations/new`}
-              className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
-            >
-              New Consultation
-            </Link>
-          )}
+          <div className="flex gap-2">
+            {canManageAppointments && (
+              <Link
+                href={`/patients/${patient.id}/follow-up/new`}
+                className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700"
+              >
+                Schedule Follow-up
+              </Link>
+            )}
+            {canCreateConsultation && (
+              <Link
+                href={`/patients/${patient.id}/consultations/new`}
+                className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
+              >
+                New Consultation
+              </Link>
+            )}
+          </div>
         </div>
 
         {consultations.length === 0 ? (
