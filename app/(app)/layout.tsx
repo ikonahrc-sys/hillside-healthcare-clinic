@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
+import { can } from "@/lib/auth/authorize";
 import { AppShell } from "@/components/layout/app-shell";
 
 export default async function AppLayout({
@@ -13,5 +14,11 @@ export default async function AppLayout({
     redirect("/login");
   }
 
-  return <AppShell user={user}>{children}</AppShell>;
+  const canManagePlacements = await can(user, "placement:manage");
+
+  return (
+    <AppShell user={user} canManagePlacements={canManagePlacements}>
+      {children}
+    </AppShell>
+  );
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 type NavItem = { label: string; href?: string };
 
-const NAV_ITEMS: NavItem[] = [
+const BASE_NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Patients", href: "/patients" },
   { label: "Medical" },
@@ -17,10 +17,21 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Settings" },
 ];
 
-export function Nav() {
+export function Nav({ canManagePlacements }: { canManagePlacements: boolean }) {
+  // "Placements" is inserted next to "Users & Roles" rather than added to
+  // the static list unconditionally - it's real and permission-gated, the
+  // rest are still placeholders for later phases.
+  const items: NavItem[] = canManagePlacements
+    ? [
+        ...BASE_NAV_ITEMS.slice(0, -2),
+        { label: "Placements", href: "/placements" },
+        ...BASE_NAV_ITEMS.slice(-2),
+      ]
+    : BASE_NAV_ITEMS;
+
   return (
     <nav className="flex flex-col gap-1 p-3">
-      {NAV_ITEMS.map((item) =>
+      {items.map((item) =>
         item.href ? (
           <Link
             key={item.label}

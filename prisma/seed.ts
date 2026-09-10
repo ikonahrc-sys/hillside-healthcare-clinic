@@ -39,6 +39,11 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   SPEECH_THERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
   OCCUPATIONAL_THERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
   HOME_NURSING_STAFF: ["patient:read", "referral:manage", "homenursing:manage", "appointment:manage"],
+  // Read-only, deliberately - a student's access to write into official
+  // documentation is a separate, larger piece of Phase 6 not built yet.
+  // What they CAN see is further scoped to their placement's department
+  // at query time (see listPatientsForStudent), not expressed here.
+  STUDENT: ["patient:read"],
 };
 
 // Dev-only test accounts, one per role, so every phase can be tested as the
@@ -50,6 +55,7 @@ const TEST_USERS = [
   { email: "speech@hillside.local", fullName: "Marcus Reyes", roleName: "SPEECH_THERAPIST" },
   { email: "ot@hillside.local", fullName: "Priya Nair", roleName: "OCCUPATIONAL_THERAPIST" },
   { email: "nurse@hillside.local", fullName: "Grace Obi", roleName: "HOME_NURSING_STAFF" },
+  { email: "student@hillside.local", fullName: "Alex Torres", roleName: "STUDENT" },
 ] as const;
 
 const DEPARTMENTS = [
@@ -142,6 +148,7 @@ async function main() {
   };
 
   const testUsers: string[] = [];
+  const usersByEmail = new Map<string, { id: string; email: string }>();
   for (const testUser of TEST_USERS) {
     const role = rolesByName.get(testUser.roleName);
     if (!role) throw new Error(`Unknown role for test user: ${testUser.roleName}`);
@@ -160,6 +167,38 @@ async function main() {
       },
     });
     testUsers.push(user.email);
+    usersByEmail.set(user.email, user);
+  }
+
+  // A seeded ACTIVE placement so the student test account can actually log
+  // in (getCurrentUser rejects a STUDENT with no active placement) and so
+  // Phase 6's department-scoped patient list has something real to show.
+  const studentUser = usersByEmail.get("student@hillside.local");
+  const supervisorUser = usersByEmail.get("physio@hillside.local");
+  const rehabDept = departmentsByCode.get("REHAB");
+  if (studentUser && rehabDept) {
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - 7);
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + 21);
+
+    const existingPlacement = await prisma.clinicalPlacement.findFirst({
+      where: { studentId: studentUser.id, departmentId: rehabDept.id },
+    });
+    if (!existingPlacement) {
+      await prisma.clinicalPlacement.create({
+        data: {
+          studentId: studentUser.id,
+          departmentId: rehabDept.id,
+          supervisorId: supervisorUser?.id,
+          startDate,
+          endDate,
+          status: "ACTIVE",
+          clinicalArea: "Physiotherapy - Orthopedic Rotation",
+        },
+      });
+    }
   }
 
   for (const medicine of MEDICINES) {

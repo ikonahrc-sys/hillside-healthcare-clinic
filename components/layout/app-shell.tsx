@@ -5,9 +5,11 @@ import type { CurrentUser } from "@/lib/auth/session";
 
 export function AppShell({
   user,
+  canManagePlacements,
   children,
 }: {
   user: CurrentUser;
+  canManagePlacements: boolean;
   children: ReactNode;
 }) {
   return (
@@ -18,7 +20,7 @@ export function AppShell({
             Hillside Healthcare Clinic
           </p>
         </div>
-        <Nav />
+        <Nav canManagePlacements={canManagePlacements} />
       </aside>
 
       <div className="flex flex-1 flex-col">

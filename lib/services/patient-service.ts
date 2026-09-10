@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { authorize } from "@/lib/auth/authorize";
 import { logAudit } from "@/lib/audit/log";
+import { getActivePlacement } from "@/lib/auth/placement";
 import type { CurrentUser } from "@/lib/auth/session";
 import type { PatientInput } from "@/lib/validation/patient";
 
@@ -31,6 +32,68 @@ export async function listPatients(user: CurrentUser | null, query?: string) {
             ],
           }
         : {}),
+    },
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+  });
+}
+
+// A patient "belongs" to a department for a student's purposes if they
+// have a referral naming that department (either direction - the
+// referring department gave the clinical context, the receiving
+// department is who's actually treating them there), or a record of the
+// type that department itself produces. Medical has no assessment/plan
+// model of its own the way Rehab and Home Nursing do, so it's keyed off
+// Consultation instead.
+const DEPARTMENT_RECORD_FILTER: Record<string, object> = {
+  MED: { consultations: { some: {} } },
+  PHARM: { prescriptions: { some: {} } },
+  REHAB: { rehabAssessments: { some: {} } },
+  HN: { homeNursingAssessments: { some: {} } },
+};
+
+export async function getActiveStudentPlacement(user: CurrentUser) {
+  const placements = await prisma.clinicalPlacement.findMany({
+    where: { studentId: user.id },
+    include: { department: { select: { id: true, name: true, code: true } } },
+  });
+  const active = getActivePlacement(placements);
+  return active
+    ? placements.find((p) => p.id === active.id)?.department
+    : undefined;
+}
+
+// A student only sees patients relevant to whichever department their
+// active placement is in - not every patient in the facility. This is
+// the "broad department-scoped clinical access" the master prompt calls
+// for: full read access to a patient's whole chart once they're in view
+// (see listConsultationsForPatient etc., all gated only on patient:read),
+// but which patients come into view at all is scoped by placement.
+export async function listPatientsForStudent(user: CurrentUser) {
+  await authorize(user, "patient:read");
+
+  const department = await getActiveStudentPlacement(user);
+  if (!department) {
+    return [];
+  }
+
+  return prisma.patient.findMany({
+    where: {
+      deletedAt: null,
+      OR: [
+        {
+          referrals: {
+            some: {
+              OR: [
+                { fromDepartmentId: department.id },
+                { toDepartmentId: department.id },
+              ],
+            },
+          },
+        },
+        ...(DEPARTMENT_RECORD_FILTER[department.code]
+          ? [DEPARTMENT_RECORD_FILTER[department.code]]
+          : []),
+      ],
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });
