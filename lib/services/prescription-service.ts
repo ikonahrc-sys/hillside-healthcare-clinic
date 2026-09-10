@@ -1,11 +1,12 @@
 import "server-only";
 import { prisma } from "@/lib/db";
-import { authorize } from "@/lib/auth/authorize";
+import { authorize, requireAuthenticated } from "@/lib/auth/authorize";
 import { logAudit } from "@/lib/audit/log";
 import type { CurrentUser } from "@/lib/auth/session";
 import type { PrescriptionInput } from "@/lib/validation/prescription";
 
-export async function listMedicines() {
+export async function listMedicines(user: CurrentUser | null) {
+  requireAuthenticated(user);
   return prisma.medicine.findMany({ orderBy: { name: "asc" } });
 }
 

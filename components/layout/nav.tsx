@@ -6,7 +6,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Patients", href: "/patients" },
   { label: "Medical" },
-  { label: "Pharmacy" },
+  { label: "Pharmacy", href: "/pharmacy/inventory" },
   { label: "Rehabilitation" },
   { label: "Home Nursing" },
   { label: "Appointments" },

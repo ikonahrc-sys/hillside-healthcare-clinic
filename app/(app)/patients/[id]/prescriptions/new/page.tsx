@@ -22,7 +22,7 @@ export default async function NewPrescriptionPage({
     redirect(`/patients/${patient.id}`);
   }
 
-  const medicines = await listMedicines();
+  const medicines = await listMedicines(user);
 
   return (
     <div>

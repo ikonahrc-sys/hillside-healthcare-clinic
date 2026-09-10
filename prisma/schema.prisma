@@ -81,14 +81,15 @@ model User {
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id])
 
-  placementsAsStudent    ClinicalPlacement[] @relation("StudentPlacements")
-  placementsAsSupervisor ClinicalPlacement[] @relation("SupervisorPlacements")
+  placementsAsStudent    ClinicalPlacement[]    @relation("StudentPlacements")
+  placementsAsSupervisor ClinicalPlacement[]    @relation("SupervisorPlacements")
   sessions               Session[]
-  consultationsAsDoctor  Consultation[]      @relation("DoctorConsultations")
-  referralsMade          Referral[]          @relation("ReferringUser")
-  referralsResponded     Referral[]          @relation("RespondingUser")
-  prescriptionsWritten   Prescription[]      @relation("PrescribingUser")
-  appointmentsAsStaff    Appointment[]       @relation("StaffAppointments")
+  consultationsAsDoctor  Consultation[]         @relation("DoctorConsultations")
+  referralsMade          Referral[]             @relation("ReferringUser")
+  referralsResponded     Referral[]             @relation("RespondingUser")
+  prescriptionsWritten   Prescription[]         @relation("PrescribingUser")
+  appointmentsAsStaff    Appointment[]          @relation("StaffAppointments")
+  inventoryTransactions  InventoryTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -326,10 +327,6 @@ model Referral {
   @@index([status])
 }
 
-// No stock, batches, or expiry tracking here - that's Phase 3 (Pharmacy)
-// territory, which needs inventory transactions and a real dispensing
-// workflow this table doesn't attempt to support yet. This is just a
-// catalog doctors can select from when writing a prescription.
 model Medicine {
   id          String  @id @default(cuid())
   name        String
@@ -338,7 +335,12 @@ model Medicine {
   dosageForm  String
   strength    String?
 
+  // Minimum total stock desired across all non-expired batches combined -
+  // a property of the catalog entry, not of any one delivery/batch.
+  reorderLevel Int?
+
   prescriptionItems PrescriptionItem[]
+  batches           MedicineBatch[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -437,4 +439,58 @@ model Appointment {
   @@index([patientId])
   @@index([staffId])
   @@index([status])
+}
+
+// One batch = one delivery of a specific medicine. quantityOnHand is a
+// cache updated atomically alongside each InventoryTransaction insert -
+// the transaction ledger below is the real source of truth and could
+// always recompute this if it ever needed re-deriving.
+model MedicineBatch {
+  id String @id @default(cuid())
+
+  medicineId String
+  medicine   Medicine @relation(fields: [medicineId], references: [id])
+
+  batchNumber    String
+  expiryDate     DateTime
+  quantityOnHand Int
+
+  receivedAt DateTime @default(now())
+
+  transactions InventoryTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([medicineId, batchNumber])
+  @@index([medicineId])
+  @@index([expiryDate])
+}
+
+enum InventoryTransactionType {
+  RECEIVED
+  DISPENSED
+  ADJUSTED
+  EXPIRED
+}
+
+model InventoryTransaction {
+  id String @id @default(cuid())
+
+  medicineBatchId String
+  medicineBatch   MedicineBatch @relation(fields: [medicineBatchId], references: [id])
+
+  type           InventoryTransactionType
+  // Positive for RECEIVED, negative for DISPENSED/EXPIRED/downward ADJUSTED.
+  quantityChange Int
+
+  performedByUserId String
+  performedByUser   User   @relation(fields: [performedByUserId], references: [id])
+
+  notes String?
+
+  createdAt DateTime @default(now())
+
+  @@index([medicineBatchId])
+  @@index([createdAt])
 }

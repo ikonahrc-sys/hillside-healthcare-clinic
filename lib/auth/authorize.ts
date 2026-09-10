@@ -45,3 +45,17 @@ export async function authorize(
   }
   return user;
 }
+
+/**
+ * For reference/catalog data (e.g. the medicine list) that any signed-in
+ * staff member reasonably needs to read, and that isn't itself sensitive
+ * clinical data - requires a session, but not any specific permission.
+ * Still an explicit call every service function makes for itself, never
+ * skipped just because the data feels low-stakes.
+ */
+export function requireAuthenticated(user: CurrentUser | null): CurrentUser {
+  if (!user) {
+    throw new AuthorizationError("Not signed in");
+  }
+  return user;
+}

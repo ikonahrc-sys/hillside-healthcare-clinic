@@ -12,6 +12,7 @@ const PERMISSIONS = [
   { key: "prescription:dispense", description: "Dispense a prescription" },
   { key: "referral:manage", description: "Create, accept, or decline referrals" },
   { key: "appointment:manage", description: "Schedule and view scheduled appointments" },
+  { key: "inventory:manage", description: "View stock and receive new medicine batches" },
   { key: "user:manage", description: "Create/edit user accounts and roles" },
   { key: "placement:manage", description: "Manage student clinical placements" },
 ] as const;
@@ -26,7 +27,12 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     "referral:manage",
     "appointment:manage",
   ],
-  PHARMACIST: ["patient:read", "prescription:dispense", "referral:manage"],
+  PHARMACIST: [
+    "patient:read",
+    "prescription:dispense",
+    "referral:manage",
+    "inventory:manage",
+  ],
 };
 
 // Dev-only test accounts, one per role, so every phase can be tested as the
@@ -47,12 +53,12 @@ const DEPARTMENTS = [
 // (adding new medicines) doesn't have a UI yet either - this is just
 // enough to write against for now.
 const MEDICINES = [
-  { name: "Amoxicillin", genericName: "Amoxicillin", category: "Antibiotic", dosageForm: "Capsule", strength: "500mg" },
-  { name: "Amoxicillin", genericName: "Amoxicillin", category: "Antibiotic", dosageForm: "Syrup", strength: "250mg/5ml" },
-  { name: "Paracetamol", genericName: "Acetaminophen", category: "Analgesic", dosageForm: "Tablet", strength: "500mg" },
-  { name: "Ibuprofen", genericName: "Ibuprofen", category: "NSAID", dosageForm: "Tablet", strength: "400mg" },
-  { name: "Cetirizine", genericName: "Cetirizine", category: "Antihistamine", dosageForm: "Tablet", strength: "10mg" },
-  { name: "Omeprazole", genericName: "Omeprazole", category: "Proton Pump Inhibitor", dosageForm: "Capsule", strength: "20mg" },
+  { name: "Amoxicillin", genericName: "Amoxicillin", category: "Antibiotic", dosageForm: "Capsule", strength: "500mg", reorderLevel: 50 },
+  { name: "Amoxicillin", genericName: "Amoxicillin", category: "Antibiotic", dosageForm: "Syrup", strength: "250mg/5ml", reorderLevel: 10 },
+  { name: "Paracetamol", genericName: "Acetaminophen", category: "Analgesic", dosageForm: "Tablet", strength: "500mg", reorderLevel: 100 },
+  { name: "Ibuprofen", genericName: "Ibuprofen", category: "NSAID", dosageForm: "Tablet", strength: "400mg", reorderLevel: 50 },
+  { name: "Cetirizine", genericName: "Cetirizine", category: "Antihistamine", dosageForm: "Tablet", strength: "10mg", reorderLevel: 30 },
+  { name: "Omeprazole", genericName: "Omeprazole", category: "Proton Pump Inhibitor", dosageForm: "Capsule", strength: "20mg", reorderLevel: 30 },
 ] as const;
 
 async function main() {
@@ -149,7 +155,7 @@ async function main() {
           dosageForm: medicine.dosageForm,
         },
       },
-      update: {},
+      update: { reorderLevel: medicine.reorderLevel },
       create: medicine,
     });
   }
