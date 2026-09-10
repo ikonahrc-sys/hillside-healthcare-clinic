@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getPatientById, formatMrn } from "@/lib/services/patient-service";
 import { listConsultationsForPatient } from "@/lib/services/consultation-service";
 import { listReferralsForPatient } from "@/lib/services/referral-service";
+import { listPrescriptionsForPatient } from "@/lib/services/prescription-service";
 import { can } from "@/lib/auth/authorize";
 import { calculateAge } from "@/lib/utils/age";
 
@@ -31,13 +32,21 @@ export default async function PatientDetailPage({
     notFound();
   }
 
-  const [consultations, referrals, canCreateConsultation, canManageReferrals] =
-    await Promise.all([
-      listConsultationsForPatient(user, patient.id),
-      listReferralsForPatient(user, patient.id),
-      user ? can(user, "consultation:create") : Promise.resolve(false),
-      user ? can(user, "referral:manage") : Promise.resolve(false),
-    ]);
+  const [
+    consultations,
+    referrals,
+    prescriptions,
+    canCreateConsultation,
+    canManageReferrals,
+    canCreatePrescription,
+  ] = await Promise.all([
+    listConsultationsForPatient(user, patient.id),
+    listReferralsForPatient(user, patient.id),
+    listPrescriptionsForPatient(user, patient.id),
+    user ? can(user, "consultation:create") : Promise.resolve(false),
+    user ? can(user, "referral:manage") : Promise.resolve(false),
+    user ? can(user, "prescription:create") : Promise.resolve(false),
+  ]);
 
   return (
     <div>
@@ -133,6 +142,64 @@ export default async function PatientDetailPage({
                 )}
                 {c.assessment && (
                   <p className="mt-1 text-sm text-slate-600">{c.assessment}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="mt-6 rounded border border-slate-200 bg-white p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-700">
+            Prescriptions
+          </h2>
+          {canCreatePrescription && (
+            <Link
+              href={`/patients/${patient.id}/prescriptions/new`}
+              className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
+            >
+              New Prescription
+            </Link>
+          )}
+        </div>
+
+        {prescriptions.length === 0 ? (
+          <p className="text-sm text-slate-500">No prescriptions yet.</p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {prescriptions.map((p) => (
+              <li
+                key={p.id}
+                className="border-t border-slate-100 pt-3 first:border-t-0 first:pt-0"
+              >
+                <div className="flex items-baseline justify-between">
+                  <p className="text-sm text-slate-900">
+                    {p.items
+                      .map(
+                        (item) =>
+                          `${item.medicine.name} ${item.medicine.strength ?? ""}`,
+                      )
+                      .join(", ")}
+                  </p>
+                  <span className="text-xs font-medium text-slate-500">
+                    {p.status}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  by {p.prescribedByUser.fullName} - {p.createdAt.toDateString()}
+                </p>
+                <ul className="mt-1 text-sm text-slate-600">
+                  {p.items.map((item) => (
+                    <li key={item.id}>
+                      {item.medicine.name} {item.medicine.strength} (
+                      {item.medicine.dosageForm}) - {item.dosageInstructions} -
+                      qty {item.quantity}
+                    </li>
+                  ))}
+                </ul>
+                {p.notes && (
+                  <p className="mt-1 text-sm text-slate-600">{p.notes}</p>
                 )}
               </li>
             ))}

@@ -86,6 +86,7 @@ model User {
   consultationsAsDoctor  Consultation[]      @relation("DoctorConsultations")
   referralsMade          Referral[]          @relation("ReferringUser")
   referralsResponded     Referral[]          @relation("RespondingUser")
+  prescriptionsWritten   Prescription[]      @relation("PrescribingUser")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -194,6 +195,7 @@ model Patient {
   consultations Consultation[]
   diagnoses     Diagnosis[]
   referrals     Referral[]
+  prescriptions Prescription[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -223,9 +225,10 @@ model Consultation {
   treatmentNotes          String?
   notes                   String?
 
-  vitals    VitalSigns?
-  diagnoses Diagnosis[]
-  referrals Referral[]
+  vitals        VitalSigns?
+  diagnoses     Diagnosis[]
+  referrals     Referral[]
+  prescriptions Prescription[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -318,4 +321,73 @@ model Referral {
   @@index([patientId])
   @@index([toDepartmentId, status])
   @@index([status])
+}
+
+// No stock, batches, or expiry tracking here - that's Phase 3 (Pharmacy)
+// territory, which needs inventory transactions and a real dispensing
+// workflow this table doesn't attempt to support yet. This is just a
+// catalog doctors can select from when writing a prescription.
+model Medicine {
+  id          String  @id @default(cuid())
+  name        String
+  genericName String?
+  category    String?
+  dosageForm  String
+  strength    String?
+
+  prescriptionItems PrescriptionItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, strength, dosageForm])
+  @@index([name])
+}
+
+enum PrescriptionStatus {
+  PENDING
+  PROCESSING
+  DISPENSED
+  CANCELLED
+}
+
+model Prescription {
+  id String @id @default(cuid())
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  consultationId String?
+  consultation   Consultation? @relation(fields: [consultationId], references: [id])
+
+  prescribedByUserId String
+  prescribedByUser   User   @relation("PrescribingUser", fields: [prescribedByUserId], references: [id])
+
+  status PrescriptionStatus @default(PENDING)
+  notes  String?
+
+  items PrescriptionItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([status])
+}
+
+model PrescriptionItem {
+  id String @id @default(cuid())
+
+  prescriptionId String
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  medicineId String
+  medicine   Medicine @relation(fields: [medicineId], references: [id])
+
+  dosageInstructions String
+  quantity           Int
+
+  createdAt DateTime @default(now())
+
+  @@index([prescriptionId])
 }

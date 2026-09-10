@@ -8,6 +8,7 @@ const PERMISSIONS = [
   { key: "patient:read", description: "Read a patient's full record" },
   { key: "patient:write", description: "Create or update a patient's record" },
   { key: "consultation:create", description: "Author a medical consultation" },
+  { key: "prescription:create", description: "Write a prescription" },
   { key: "prescription:dispense", description: "Dispense a prescription" },
   { key: "referral:manage", description: "Create, accept, or decline referrals" },
   { key: "user:manage", description: "Create/edit user accounts and roles" },
@@ -16,7 +17,13 @@ const PERMISSIONS = [
 
 const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   ADMINISTRATOR: PERMISSIONS.map((p) => p.key),
-  DOCTOR: ["patient:read", "patient:write", "consultation:create", "referral:manage"],
+  DOCTOR: [
+    "patient:read",
+    "patient:write",
+    "consultation:create",
+    "prescription:create",
+    "referral:manage",
+  ],
   PHARMACIST: ["patient:read", "prescription:dispense", "referral:manage"],
 };
 
@@ -31,6 +38,19 @@ const DEPARTMENTS = [
   { name: "Administration", code: "ADMIN" },
   { name: "Medical", code: "MED" },
   { name: "Pharmacy", code: "PHARM" },
+] as const;
+
+// A small starter catalog so prescribing is actually testable. No
+// stock/inventory here - that's Phase 3's job. Real catalog management
+// (adding new medicines) doesn't have a UI yet either - this is just
+// enough to write against for now.
+const MEDICINES = [
+  { name: "Amoxicillin", genericName: "Amoxicillin", category: "Antibiotic", dosageForm: "Capsule", strength: "500mg" },
+  { name: "Amoxicillin", genericName: "Amoxicillin", category: "Antibiotic", dosageForm: "Syrup", strength: "250mg/5ml" },
+  { name: "Paracetamol", genericName: "Acetaminophen", category: "Analgesic", dosageForm: "Tablet", strength: "500mg" },
+  { name: "Ibuprofen", genericName: "Ibuprofen", category: "NSAID", dosageForm: "Tablet", strength: "400mg" },
+  { name: "Cetirizine", genericName: "Cetirizine", category: "Antihistamine", dosageForm: "Tablet", strength: "10mg" },
+  { name: "Omeprazole", genericName: "Omeprazole", category: "Proton Pump Inhibitor", dosageForm: "Capsule", strength: "20mg" },
 ] as const;
 
 async function main() {
@@ -118,12 +138,27 @@ async function main() {
     testUsers.push(user.email);
   }
 
+  for (const medicine of MEDICINES) {
+    await prisma.medicine.upsert({
+      where: {
+        name_strength_dosageForm: {
+          name: medicine.name,
+          strength: medicine.strength,
+          dosageForm: medicine.dosageForm,
+        },
+      },
+      update: {},
+      create: medicine,
+    });
+  }
+
   console.log("Seeded:", {
     departments: [...departmentsByCode.keys()],
     roles: [...rolesByName.keys()],
     permissions: [...permissionsByKey.keys()],
     adminUser: adminUser.email,
     testUsers,
+    medicines: MEDICINES.length,
   });
 }
 
