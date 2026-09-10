@@ -34,9 +34,9 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     "referral:manage",
     "inventory:manage",
   ],
-  PHYSIOTHERAPIST: ["patient:read", "referral:manage", "rehab:manage"],
-  SPEECH_THERAPIST: ["patient:read", "referral:manage", "rehab:manage"],
-  OCCUPATIONAL_THERAPIST: ["patient:read", "referral:manage", "rehab:manage"],
+  PHYSIOTHERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
+  SPEECH_THERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
+  OCCUPATIONAL_THERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
 };
 
 // Dev-only test accounts, one per role, so every phase can be tested as the

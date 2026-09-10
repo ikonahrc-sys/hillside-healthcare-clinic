@@ -1,8 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { scheduleFollowUpSchema } from "@/lib/validation/appointment";
-import { scheduleFollowUp } from "@/lib/services/appointment-service";
+import { scheduleAppointmentSchema } from "@/lib/validation/appointment";
+import {
+  scheduleFollowUp,
+  scheduleTherapyAppointment,
+} from "@/lib/services/appointment-service";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AuthorizationError } from "@/lib/auth/authorize";
 
@@ -13,7 +16,7 @@ export async function scheduleFollowUpAction(
   _prevState: ScheduleFollowUpState,
   formData: FormData,
 ): Promise<ScheduleFollowUpState> {
-  const parsed = scheduleFollowUpSchema.safeParse({
+  const parsed = scheduleAppointmentSchema.safeParse({
     scheduledAt: formData.get("scheduledAt"),
     notes: formData.get("notes"),
   });
@@ -37,4 +40,37 @@ export async function scheduleFollowUpAction(
   }
 
   redirect(`/patients/${patientId}`);
+}
+
+export type ScheduleTherapyAppointmentState = { error: string } | null;
+
+export async function scheduleTherapyAppointmentAction(
+  patientId: string,
+  _prevState: ScheduleTherapyAppointmentState,
+  formData: FormData,
+): Promise<ScheduleTherapyAppointmentState> {
+  const parsed = scheduleAppointmentSchema.safeParse({
+    scheduledAt: formData.get("scheduledAt"),
+    notes: formData.get("notes"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const user = await getCurrentUser();
+
+  try {
+    await scheduleTherapyAppointment(user, patientId, parsed.data);
+  } catch (e) {
+    if (e instanceof AuthorizationError) {
+      return { error: "You are not authorized to schedule appointments." };
+    }
+    if (e instanceof Error) {
+      return { error: e.message };
+    }
+    throw e;
+  }
+
+  redirect(`/patients/${patientId}?tab=rehabilitation`);
 }

@@ -4,15 +4,15 @@ import { authorize } from "@/lib/auth/authorize";
 import { logAudit } from "@/lib/audit/log";
 import { getFacilityDayRange } from "@/lib/utils/schedule";
 import type { CurrentUser } from "@/lib/auth/session";
-import type { ScheduleFollowUpInput } from "@/lib/validation/appointment";
+import type { ScheduleAppointmentInput } from "@/lib/validation/appointment";
+import type { AppointmentType } from "@/app/generated/prisma/client";
 
-export async function scheduleFollowUp(
-  user: CurrentUser | null,
+async function createAppointment(
+  authedUser: NonNullable<CurrentUser>,
   patientId: string,
-  input: ScheduleFollowUpInput,
+  type: AppointmentType,
+  input: ScheduleAppointmentInput,
 ) {
-  const authedUser = await authorize(user, "appointment:manage");
-
   const patient = await prisma.patient.findFirst({
     where: { id: patientId, deletedAt: null },
   });
@@ -29,7 +29,7 @@ export async function scheduleFollowUp(
       patientId: patient.id,
       departmentId: authedUser.departmentId,
       staffId: authedUser.id,
-      type: "MEDICAL_FOLLOW_UP",
+      type,
       scheduledAt: input.scheduledAt,
       notes: input.notes,
     },
@@ -45,6 +45,38 @@ export async function scheduleFollowUp(
   });
 
   return appointment;
+}
+
+export async function scheduleFollowUp(
+  user: CurrentUser | null,
+  patientId: string,
+  input: ScheduleAppointmentInput,
+) {
+  const authedUser = await authorize(user, "appointment:manage");
+  return createAppointment(authedUser, patientId, "MEDICAL_FOLLOW_UP", input);
+}
+
+// A therapist's discipline maps 1:1 to their role, same as how a doctor's
+// department is always MED - no separate "pick a discipline" step needed.
+const REHAB_APPOINTMENT_TYPE_BY_ROLE: Record<string, AppointmentType> = {
+  PHYSIOTHERAPIST: "PHYSIOTHERAPY",
+  SPEECH_THERAPIST: "SPEECH_THERAPY",
+  OCCUPATIONAL_THERAPIST: "OCCUPATIONAL_THERAPY",
+};
+
+export async function scheduleTherapyAppointment(
+  user: CurrentUser | null,
+  patientId: string,
+  input: ScheduleAppointmentInput,
+) {
+  const authedUser = await authorize(user, "appointment:manage");
+
+  const type = REHAB_APPOINTMENT_TYPE_BY_ROLE[authedUser.role.name];
+  if (!type) {
+    throw new Error("Your role cannot schedule therapy appointments.");
+  }
+
+  return createAppointment(authedUser, patientId, type, input);
 }
 
 export async function listAppointmentsForPatient(
@@ -65,22 +97,18 @@ const scheduleInclude = {
   staff: { select: { fullName: true } },
 } as const;
 
-export async function getMedicalSchedule(user: CurrentUser | null) {
-  await authorize(user, "appointment:manage");
-
-  const medDepartment = await prisma.department.findUnique({ where: { code: "MED" } });
-  if (!medDepartment) {
-    return { today: [], tomorrow: [], upcoming: [] };
-  }
-
+// Shared Today/Tomorrow/Upcoming(14 days) windowing, reused by every
+// department's dashboard - only the filter narrowing which appointments
+// count differs between them.
+async function getScheduleWindows(baseWhere: {
+  departmentId?: string;
+  staffId?: string;
+  type?: { in: AppointmentType[] };
+  status: { notIn: ("CANCELLED" | "COMPLETED")[] };
+}) {
   const today = getFacilityDayRange(0);
   const tomorrow = getFacilityDayRange(1);
   const upcomingCutoff = getFacilityDayRange(14).end;
-
-  const baseWhere = {
-    departmentId: medDepartment.id,
-    status: { notIn: ["CANCELLED", "COMPLETED"] as ("CANCELLED" | "COMPLETED")[] },
-  };
 
   const [todayAppts, tomorrowAppts, upcomingAppts] = await Promise.all([
     prisma.appointment.findMany({
@@ -102,4 +130,31 @@ export async function getMedicalSchedule(user: CurrentUser | null) {
   ]);
 
   return { today: todayAppts, tomorrow: tomorrowAppts, upcoming: upcomingAppts };
+}
+
+export async function getMedicalSchedule(user: CurrentUser | null) {
+  await authorize(user, "appointment:manage");
+
+  const medDepartment = await prisma.department.findUnique({ where: { code: "MED" } });
+  if (!medDepartment) {
+    return { today: [], tomorrow: [], upcoming: [] };
+  }
+
+  return getScheduleWindows({
+    departmentId: medDepartment.id,
+    status: { notIn: ["CANCELLED", "COMPLETED"] },
+  });
+}
+
+// Scoped to the individual therapist, not the whole Rehab department - a
+// physiotherapist wants "my patients today", not Speech/OT colleagues'
+// appointments mixed in, since the three disciplines run independently.
+export async function getRehabSchedule(user: CurrentUser | null) {
+  const authedUser = await authorize(user, "appointment:manage");
+
+  return getScheduleWindows({
+    staffId: authedUser.id,
+    type: { in: ["PHYSIOTHERAPY", "SPEECH_THERAPY", "OCCUPATIONAL_THERAPY"] },
+    status: { notIn: ["CANCELLED", "COMPLETED"] },
+  });
 }

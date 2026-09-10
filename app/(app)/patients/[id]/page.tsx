@@ -5,7 +5,10 @@ import { listConsultationsForPatient } from "@/lib/services/consultation-service
 import { listReferralsForPatient } from "@/lib/services/referral-service";
 import { listPrescriptionsForPatient } from "@/lib/services/prescription-service";
 import { listAppointmentsForPatient } from "@/lib/services/appointment-service";
-import { listRehabAssessmentsForPatient } from "@/lib/services/rehab-service";
+import {
+  listRehabAssessmentsForPatient,
+  listTherapySessionsForPatient,
+} from "@/lib/services/rehab-service";
 import { can } from "@/lib/auth/authorize";
 import { calculateAge } from "@/lib/utils/age";
 import { buildPatientTimeline } from "@/lib/utils/timeline";
@@ -50,6 +53,7 @@ export default async function PatientDetailPage({
     prescriptions,
     appointments,
     rehabAssessments,
+    therapySessions,
     canCreateConsultation,
     canManageReferrals,
     canCreatePrescription,
@@ -61,6 +65,7 @@ export default async function PatientDetailPage({
     listPrescriptionsForPatient(user, patient.id),
     listAppointmentsForPatient(user, patient.id),
     listRehabAssessmentsForPatient(user, patient.id),
+    listTherapySessionsForPatient(user, patient.id),
     user ? can(user, "consultation:create") : Promise.resolve(false),
     user ? can(user, "referral:manage") : Promise.resolve(false),
     user ? can(user, "prescription:create") : Promise.resolve(false),
@@ -74,6 +79,7 @@ export default async function PatientDetailPage({
     referrals,
     appointments,
     rehabAssessments,
+    therapySessions,
   });
 
   return (
@@ -120,6 +126,7 @@ export default async function PatientDetailPage({
           patientId={patient.id}
           assessments={rehabAssessments}
           canManage={canManageRehab}
+          canScheduleAppointments={canManageAppointments}
         />
       )}
     </div>

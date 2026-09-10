@@ -93,6 +93,7 @@ model User {
   itemsDispensed         PrescriptionItem[]     @relation("DispensingUser")
   rehabAssessments       RehabAssessment[]      @relation("RehabAssessmentTherapist")
   rehabTreatmentPlans    RehabTreatmentPlan[]   @relation("RehabTreatmentPlanTherapist")
+  therapySessions        TherapySession[]       @relation("TherapySessionTherapist")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -205,6 +206,7 @@ model Patient {
   appointments        Appointment[]
   rehabAssessments    RehabAssessment[]
   rehabTreatmentPlans RehabTreatmentPlan[]
+  therapySessions     TherapySession[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -415,12 +417,14 @@ model PrescriptionItem {
   @@index([prescriptionId])
 }
 
-// Only MEDICAL_FOLLOW_UP exists for now - PHYSIOTHERAPY, SPEECH_THERAPY,
-// OCCUPATIONAL_THERAPY, and HOME_NURSING_VISIT get added when those
-// departments' real scheduling workflows are built in Phase 4/5, not
-// speculatively now.
+// PHYSIOTHERAPY/SPEECH_THERAPY/OCCUPATIONAL_THERAPY added in Phase 4 step 2
+// alongside Rehab's own scheduling workflow. HOME_NURSING_VISIT still
+// waits for Phase 5, not speculatively added now.
 enum AppointmentType {
   MEDICAL_FOLLOW_UP
+  PHYSIOTHERAPY
+  SPEECH_THERAPY
+  OCCUPATIONAL_THERAPY
 }
 
 enum AppointmentStatus {
@@ -591,9 +595,42 @@ model RehabTreatmentPlan {
   precautions String?
   status      TreatmentPlanStatus @default(ACTIVE)
 
+  therapySessions TherapySession[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([patientId])
+  @@index([therapistId])
+}
+
+// A single logged visit against an active treatment plan - what Consultation
+// is to a Medical visit. Deliberately not linked to a specific Appointment
+// row, same reasoning as Consultation/Appointment: the appointment is just
+// scheduling, this is the clinical record of what actually happened.
+model TherapySession {
+  id String @id @default(cuid())
+
+  treatmentPlanId String
+  treatmentPlan   RehabTreatmentPlan @relation(fields: [treatmentPlanId], references: [id])
+
+  // Denormalized, same reasoning as RehabTreatmentPlan.patientId.
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  therapistId String
+  therapist   User   @relation("TherapySessionTherapist", fields: [therapistId], references: [id])
+
+  sessionDate DateTime @default(now())
+
+  activities String
+  progress   String?
+  notes      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([treatmentPlanId])
   @@index([patientId])
   @@index([therapistId])
 }

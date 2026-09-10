@@ -5,9 +5,11 @@ import {
   rehabAssessmentSchema,
   rehabTreatmentPlanSchema,
 } from "@/lib/validation/rehab";
+import { therapySessionSchema } from "@/lib/validation/therapy-session";
 import {
   createRehabAssessment,
   createTreatmentPlan,
+  logTherapySession,
 } from "@/lib/services/rehab-service";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AuthorizationError } from "@/lib/auth/authorize";
@@ -44,6 +46,39 @@ export async function createRehabAssessmentAction(
   } catch (e) {
     if (e instanceof AuthorizationError) {
       return { error: "You are not authorized to create rehabilitation assessments." };
+    }
+    if (e instanceof Error) {
+      return { error: e.message };
+    }
+    throw e;
+  }
+
+  redirect(`/rehab-assessments/${assessmentId}`);
+}
+
+export async function logTherapySessionAction(
+  assessmentId: string,
+  treatmentPlanId: string,
+  _prevState: RehabActionState,
+  formData: FormData,
+): Promise<RehabActionState> {
+  const parsed = therapySessionSchema.safeParse({
+    activities: formData.get("activities"),
+    progress: formData.get("progress"),
+    notes: formData.get("notes"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const user = await getCurrentUser();
+
+  try {
+    await logTherapySession(user, treatmentPlanId, parsed.data);
+  } catch (e) {
+    if (e instanceof AuthorizationError) {
+      return { error: "You are not authorized to log therapy sessions." };
     }
     if (e instanceof Error) {
       return { error: e.message };

@@ -2,13 +2,17 @@ import type { listConsultationsForPatient } from "@/lib/services/consultation-se
 import type { listPrescriptionsForPatient } from "@/lib/services/prescription-service";
 import type { listReferralsForPatient } from "@/lib/services/referral-service";
 import type { listAppointmentsForPatient } from "@/lib/services/appointment-service";
-import type { listRehabAssessmentsForPatient } from "@/lib/services/rehab-service";
+import type {
+  listRehabAssessmentsForPatient,
+  listTherapySessionsForPatient,
+} from "@/lib/services/rehab-service";
 
 type Consultation = Awaited<ReturnType<typeof listConsultationsForPatient>>[number];
 type Prescription = Awaited<ReturnType<typeof listPrescriptionsForPatient>>[number];
 type Referral = Awaited<ReturnType<typeof listReferralsForPatient>>[number];
 type Appointment = Awaited<ReturnType<typeof listAppointmentsForPatient>>[number];
 type RehabAssessment = Awaited<ReturnType<typeof listRehabAssessmentsForPatient>>[number];
+type TherapySession = Awaited<ReturnType<typeof listTherapySessionsForPatient>>[number];
 
 const DISCIPLINE_LABELS: Record<string, string> = {
   PHYSIOTHERAPY: "Physiotherapy",
@@ -19,7 +23,13 @@ const DISCIPLINE_LABELS: Record<string, string> = {
 export type TimelineEntry = {
   id: string;
   date: Date;
-  type: "consultation" | "prescription" | "referral" | "appointment" | "rehab";
+  type:
+    | "consultation"
+    | "prescription"
+    | "referral"
+    | "appointment"
+    | "rehab"
+    | "therapySession";
   title: string;
   subtitle: string;
   isUpcoming: boolean;
@@ -31,6 +41,7 @@ export function buildPatientTimeline(data: {
   referrals: Referral[];
   appointments: Appointment[];
   rehabAssessments: RehabAssessment[];
+  therapySessions: TherapySession[];
 }): TimelineEntry[] {
   const now = new Date();
   const entries: TimelineEntry[] = [];
@@ -86,6 +97,17 @@ export function buildPatientTimeline(data: {
       type: "rehab",
       title: `${DISCIPLINE_LABELS[ra.discipline]} assessment`,
       subtitle: `Rehabilitation - ${ra.therapist.fullName}${ra.treatmentPlan ? " (plan active)" : ""}`,
+      isUpcoming: false,
+    });
+  }
+
+  for (const s of data.therapySessions) {
+    entries.push({
+      id: s.id,
+      date: s.sessionDate,
+      type: "therapySession",
+      title: "Therapy session",
+      subtitle: `Rehabilitation - ${s.therapist.fullName}`,
       isUpcoming: false,
     });
   }

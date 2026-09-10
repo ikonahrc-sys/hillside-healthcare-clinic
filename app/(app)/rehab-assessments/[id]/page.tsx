@@ -5,6 +5,7 @@ import { getRehabAssessment } from "@/lib/services/rehab-service";
 import { formatMrn } from "@/lib/services/patient-service";
 import { can } from "@/lib/auth/authorize";
 import { NewTreatmentPlanForm } from "@/components/rehab/new-treatment-plan-form";
+import { LogTherapySessionForm } from "@/components/rehab/log-therapy-session-form";
 
 const DISCIPLINE_LABELS: Record<string, string> = {
   PHYSIOTHERAPY: "Physiotherapy",
@@ -134,6 +135,51 @@ export default async function RehabAssessmentPage({
           <p className="text-sm text-slate-500">No treatment plan yet.</p>
         )}
       </div>
+
+      {assessment.treatmentPlan && (
+        <div className="mt-6 rounded border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">
+            Therapy Sessions
+          </h2>
+
+          {assessment.treatmentPlan.therapySessions.length > 0 && (
+            <ul className="mb-4 flex flex-col gap-3">
+              {assessment.treatmentPlan.therapySessions.map((s) => (
+                <li
+                  key={s.id}
+                  className="border-t border-slate-100 pt-3 first:border-t-0 first:pt-0"
+                >
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-xs font-medium text-slate-400">
+                      {s.sessionDate.toDateString()} - {s.therapist.fullName}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-700">{s.activities}</p>
+                  {s.progress && (
+                    <p className="mt-1 text-sm text-slate-600">
+                      Progress: {s.progress}
+                    </p>
+                  )}
+                  {s.notes && (
+                    <p className="mt-1 text-sm text-slate-500">{s.notes}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {assessment.treatmentPlan.therapySessions.length === 0 && (
+            <p className="mb-4 text-sm text-slate-500">No sessions logged yet.</p>
+          )}
+
+          {canManage && (
+            <LogTherapySessionForm
+              assessmentId={assessment.id}
+              treatmentPlanId={assessment.treatmentPlan.id}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

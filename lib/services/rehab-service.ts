@@ -7,6 +7,7 @@ import type {
   RehabAssessmentInput,
   RehabTreatmentPlanInput,
 } from "@/lib/validation/rehab";
+import type { TherapySessionInput } from "@/lib/validation/therapy-session";
 
 export async function listRehabAssessmentsForPatient(
   user: CurrentUser | null,
@@ -35,7 +36,14 @@ export async function getRehabAssessment(
     include: {
       patient: { select: { id: true, firstName: true, lastName: true, mrnNumber: true } },
       therapist: { select: { fullName: true } },
-      treatmentPlan: true,
+      treatmentPlan: {
+        include: {
+          therapySessions: {
+            include: { therapist: { select: { fullName: true } } },
+            orderBy: { sessionDate: "desc" },
+          },
+        },
+      },
     },
   });
 }
@@ -124,4 +132,54 @@ export async function createTreatmentPlan(
   });
 
   return plan;
+}
+
+export async function logTherapySession(
+  user: CurrentUser | null,
+  treatmentPlanId: string,
+  input: TherapySessionInput,
+) {
+  const authedUser = await authorize(user, "rehab:manage");
+
+  const plan = await prisma.rehabTreatmentPlan.findUnique({
+    where: { id: treatmentPlanId },
+  });
+  if (!plan) {
+    throw new Error("Treatment plan not found");
+  }
+
+  const session = await prisma.therapySession.create({
+    data: {
+      treatmentPlanId: plan.id,
+      patientId: plan.patientId,
+      therapistId: authedUser.id,
+      activities: input.activities,
+      progress: input.progress,
+      notes: input.notes,
+    },
+  });
+
+  await logAudit({
+    actorId: authedUser.id,
+    actorEmail: authedUser.email,
+    action: "THERAPY_SESSION_LOG",
+    entityType: "TherapySession",
+    entityId: session.id,
+    metadata: { patientId: plan.patientId, treatmentPlanId: plan.id },
+  });
+
+  return session;
+}
+
+export async function listTherapySessionsForPatient(
+  user: CurrentUser | null,
+  patientId: string,
+) {
+  await authorize(user, "patient:read");
+
+  return prisma.therapySession.findMany({
+    where: { patientId },
+    include: { therapist: { select: { fullName: true } } },
+    orderBy: { sessionDate: "desc" },
+  });
 }

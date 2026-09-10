@@ -87,7 +87,7 @@ function ScheduleColumn({
   );
 }
 
-export function MedicalSchedule({
+export function DepartmentSchedule({
   today,
   tomorrow,
   upcoming,
