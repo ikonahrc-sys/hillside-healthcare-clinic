@@ -96,6 +96,7 @@ model User {
   therapySessions        TherapySession[]       @relation("TherapySessionTherapist")
   homeNursingAssessments HomeNursingAssessment[] @relation("HomeNursingAssessmentNurse")
   homeNursingCarePlans   HomeNursingCarePlan[]  @relation("HomeNursingCarePlanNurse")
+  homeVisits             HomeVisit[]            @relation("HomeVisitNurse")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -211,6 +212,7 @@ model Patient {
   therapySessions        TherapySession[]
   homeNursingAssessments HomeNursingAssessment[]
   homeNursingCarePlans   HomeNursingCarePlan[]
+  homeVisits             HomeVisit[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -422,14 +424,12 @@ model PrescriptionItem {
   @@index([prescriptionId])
 }
 
-// PHYSIOTHERAPY/SPEECH_THERAPY/OCCUPATIONAL_THERAPY added in Phase 4 step 2
-// alongside Rehab's own scheduling workflow. HOME_NURSING_VISIT still
-// waits for Phase 5, not speculatively added now.
 enum AppointmentType {
   MEDICAL_FOLLOW_UP
   PHYSIOTHERAPY
   SPEECH_THERAPY
   OCCUPATIONAL_THERAPY
+  HOME_NURSING_VISIT
 }
 
 enum AppointmentStatus {
@@ -693,9 +693,41 @@ model HomeNursingCarePlan {
   // no separate enum needed for the same three states.
   status TreatmentPlanStatus @default(ACTIVE)
 
+  homeVisits HomeVisit[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([patientId])
+  @@index([nurseId])
+}
+
+// A single logged home visit against an active care plan - the Home
+// Nursing equivalent of TherapySession. Deliberately not linked to a
+// specific Appointment row, same reasoning as TherapySession/Appointment.
+model HomeVisit {
+  id String @id @default(cuid())
+
+  carePlanId String
+  carePlan   HomeNursingCarePlan @relation(fields: [carePlanId], references: [id])
+
+  // Denormalized, same reasoning as HomeNursingCarePlan.patientId.
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  nurseId String
+  nurse   User   @relation("HomeVisitNurse", fields: [nurseId], references: [id])
+
+  visitDate DateTime @default(now())
+
+  careProvided     String
+  patientCondition String?
+  notes            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([carePlanId])
   @@index([patientId])
   @@index([nurseId])
 }

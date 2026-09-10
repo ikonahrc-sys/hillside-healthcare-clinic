@@ -7,6 +7,7 @@ import type {
   HomeNursingAssessmentInput,
   HomeNursingCarePlanInput,
 } from "@/lib/validation/home-nursing";
+import type { HomeVisitInput } from "@/lib/validation/home-visit";
 
 export async function listHomeNursingAssessmentsForPatient(
   user: CurrentUser | null,
@@ -35,7 +36,14 @@ export async function getHomeNursingAssessment(
     include: {
       patient: { select: { id: true, firstName: true, lastName: true, mrnNumber: true } },
       nurse: { select: { fullName: true } },
-      carePlan: true,
+      carePlan: {
+        include: {
+          homeVisits: {
+            include: { nurse: { select: { fullName: true } } },
+            orderBy: { visitDate: "desc" },
+          },
+        },
+      },
     },
   });
 }
@@ -122,4 +130,54 @@ export async function createHomeNursingCarePlan(
   });
 
   return plan;
+}
+
+export async function logHomeVisit(
+  user: CurrentUser | null,
+  carePlanId: string,
+  input: HomeVisitInput,
+) {
+  const authedUser = await authorize(user, "homenursing:manage");
+
+  const plan = await prisma.homeNursingCarePlan.findUnique({
+    where: { id: carePlanId },
+  });
+  if (!plan) {
+    throw new Error("Care plan not found");
+  }
+
+  const visit = await prisma.homeVisit.create({
+    data: {
+      carePlanId: plan.id,
+      patientId: plan.patientId,
+      nurseId: authedUser.id,
+      careProvided: input.careProvided,
+      patientCondition: input.patientCondition,
+      notes: input.notes,
+    },
+  });
+
+  await logAudit({
+    actorId: authedUser.id,
+    actorEmail: authedUser.email,
+    action: "HOME_VISIT_LOG",
+    entityType: "HomeVisit",
+    entityId: visit.id,
+    metadata: { patientId: plan.patientId, carePlanId: plan.id },
+  });
+
+  return visit;
+}
+
+export async function listHomeVisitsForPatient(
+  user: CurrentUser | null,
+  patientId: string,
+) {
+  await authorize(user, "patient:read");
+
+  return prisma.homeVisit.findMany({
+    where: { patientId },
+    include: { nurse: { select: { fullName: true } } },
+    orderBy: { visitDate: "desc" },
+  });
 }

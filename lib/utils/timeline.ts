@@ -6,7 +6,10 @@ import type {
   listRehabAssessmentsForPatient,
   listTherapySessionsForPatient,
 } from "@/lib/services/rehab-service";
-import type { listHomeNursingAssessmentsForPatient } from "@/lib/services/home-nursing-service";
+import type {
+  listHomeNursingAssessmentsForPatient,
+  listHomeVisitsForPatient,
+} from "@/lib/services/home-nursing-service";
 
 type Consultation = Awaited<ReturnType<typeof listConsultationsForPatient>>[number];
 type Prescription = Awaited<ReturnType<typeof listPrescriptionsForPatient>>[number];
@@ -15,6 +18,7 @@ type Appointment = Awaited<ReturnType<typeof listAppointmentsForPatient>>[number
 type RehabAssessment = Awaited<ReturnType<typeof listRehabAssessmentsForPatient>>[number];
 type TherapySession = Awaited<ReturnType<typeof listTherapySessionsForPatient>>[number];
 type HomeNursingAssessment = Awaited<ReturnType<typeof listHomeNursingAssessmentsForPatient>>[number];
+type HomeVisit = Awaited<ReturnType<typeof listHomeVisitsForPatient>>[number];
 
 const DISCIPLINE_LABELS: Record<string, string> = {
   PHYSIOTHERAPY: "Physiotherapy",
@@ -27,6 +31,7 @@ const APPOINTMENT_TYPE_LABELS: Record<string, string> = {
   PHYSIOTHERAPY: "Physiotherapy session",
   SPEECH_THERAPY: "Speech therapy session",
   OCCUPATIONAL_THERAPY: "Occupational therapy session",
+  HOME_NURSING_VISIT: "Home nursing visit",
 };
 
 export type TimelineEntry = {
@@ -39,7 +44,8 @@ export type TimelineEntry = {
     | "appointment"
     | "rehab"
     | "therapySession"
-    | "homeNursing";
+    | "homeNursing"
+    | "homeVisit";
   title: string;
   subtitle: string;
   isUpcoming: boolean;
@@ -53,6 +59,7 @@ export function buildPatientTimeline(data: {
   rehabAssessments: RehabAssessment[];
   therapySessions: TherapySession[];
   homeNursingAssessments: HomeNursingAssessment[];
+  homeVisits: HomeVisit[];
 }): TimelineEntry[] {
   const now = new Date();
   const entries: TimelineEntry[] = [];
@@ -130,6 +137,17 @@ export function buildPatientTimeline(data: {
       type: "homeNursing",
       title: "Home nursing assessment",
       subtitle: `Home Nursing - ${hn.nurse.fullName}${hn.carePlan ? " (plan active)" : ""}`,
+      isUpcoming: false,
+    });
+  }
+
+  for (const v of data.homeVisits) {
+    entries.push({
+      id: v.id,
+      date: v.visitDate,
+      type: "homeVisit",
+      title: "Home visit",
+      subtitle: `Home Nursing - ${v.nurse.fullName}`,
       isUpcoming: false,
     });
   }

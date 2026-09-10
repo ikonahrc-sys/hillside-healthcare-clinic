@@ -5,9 +5,11 @@ import {
   homeNursingAssessmentSchema,
   homeNursingCarePlanSchema,
 } from "@/lib/validation/home-nursing";
+import { homeVisitSchema } from "@/lib/validation/home-visit";
 import {
   createHomeNursingAssessment,
   createHomeNursingCarePlan,
+  logHomeVisit,
 } from "@/lib/services/home-nursing-service";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AuthorizationError } from "@/lib/auth/authorize";
@@ -42,6 +44,39 @@ export async function createHomeNursingAssessmentAction(
   } catch (e) {
     if (e instanceof AuthorizationError) {
       return { error: "You are not authorized to create home nursing assessments." };
+    }
+    if (e instanceof Error) {
+      return { error: e.message };
+    }
+    throw e;
+  }
+
+  redirect(`/home-nursing-assessments/${assessmentId}`);
+}
+
+export async function logHomeVisitAction(
+  assessmentId: string,
+  carePlanId: string,
+  _prevState: HomeNursingActionState,
+  formData: FormData,
+): Promise<HomeNursingActionState> {
+  const parsed = homeVisitSchema.safeParse({
+    careProvided: formData.get("careProvided"),
+    patientCondition: formData.get("patientCondition"),
+    notes: formData.get("notes"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const user = await getCurrentUser();
+
+  try {
+    await logHomeVisit(user, carePlanId, parsed.data);
+  } catch (e) {
+    if (e instanceof AuthorizationError) {
+      return { error: "You are not authorized to log home visits." };
     }
     if (e instanceof Error) {
       return { error: e.message };

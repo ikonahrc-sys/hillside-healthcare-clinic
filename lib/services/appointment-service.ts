@@ -79,6 +79,15 @@ export async function scheduleTherapyAppointment(
   return createAppointment(authedUser, patientId, type, input);
 }
 
+export async function scheduleHomeNursingVisit(
+  user: CurrentUser | null,
+  patientId: string,
+  input: ScheduleAppointmentInput,
+) {
+  const authedUser = await authorize(user, "appointment:manage");
+  return createAppointment(authedUser, patientId, "HOME_NURSING_VISIT", input);
+}
+
 export async function listAppointmentsForPatient(
   user: CurrentUser | null,
   patientId: string,
@@ -155,6 +164,18 @@ export async function getRehabSchedule(user: CurrentUser | null) {
   return getScheduleWindows({
     staffId: authedUser.id,
     type: { in: ["PHYSIOTHERAPY", "SPEECH_THERAPY", "OCCUPATIONAL_THERAPY"] },
+    status: { notIn: ["CANCELLED", "COMPLETED"] },
+  });
+}
+
+// Scoped to the individual nurse, same reasoning as getRehabSchedule - a
+// nurse wants "my home visits today", not every nurse's caseload.
+export async function getHomeNursingSchedule(user: CurrentUser | null) {
+  const authedUser = await authorize(user, "appointment:manage");
+
+  return getScheduleWindows({
+    staffId: authedUser.id,
+    type: { in: ["HOME_NURSING_VISIT"] },
     status: { notIn: ["CANCELLED", "COMPLETED"] },
   });
 }

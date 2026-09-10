@@ -5,6 +5,7 @@ import { getHomeNursingAssessment } from "@/lib/services/home-nursing-service";
 import { formatMrn } from "@/lib/services/patient-service";
 import { can } from "@/lib/auth/authorize";
 import { NewCarePlanForm } from "@/components/home-nursing/new-care-plan-form";
+import { LogHomeVisitForm } from "@/components/home-nursing/log-home-visit-form";
 
 export default async function HomeNursingAssessmentPage({
   params,
@@ -119,6 +120,51 @@ export default async function HomeNursingAssessmentPage({
           <p className="text-sm text-slate-500">No care plan yet.</p>
         )}
       </div>
+
+      {assessment.carePlan && (
+        <div className="mt-6 rounded border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">
+            Home Visits
+          </h2>
+
+          {assessment.carePlan.homeVisits.length > 0 && (
+            <ul className="mb-4 flex flex-col gap-3">
+              {assessment.carePlan.homeVisits.map((v) => (
+                <li
+                  key={v.id}
+                  className="border-t border-slate-100 pt-3 first:border-t-0 first:pt-0"
+                >
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-xs font-medium text-slate-400">
+                      {v.visitDate.toDateString()} - {v.nurse.fullName}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-700">{v.careProvided}</p>
+                  {v.patientCondition && (
+                    <p className="mt-1 text-sm text-slate-600">
+                      Condition: {v.patientCondition}
+                    </p>
+                  )}
+                  {v.notes && (
+                    <p className="mt-1 text-sm text-slate-500">{v.notes}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {assessment.carePlan.homeVisits.length === 0 && (
+            <p className="mb-4 text-sm text-slate-500">No visits logged yet.</p>
+          )}
+
+          {canManage && (
+            <LogHomeVisitForm
+              assessmentId={assessment.id}
+              carePlanId={assessment.carePlan.id}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

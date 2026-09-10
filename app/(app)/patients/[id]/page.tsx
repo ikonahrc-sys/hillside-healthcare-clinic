@@ -9,7 +9,10 @@ import {
   listRehabAssessmentsForPatient,
   listTherapySessionsForPatient,
 } from "@/lib/services/rehab-service";
-import { listHomeNursingAssessmentsForPatient } from "@/lib/services/home-nursing-service";
+import {
+  listHomeNursingAssessmentsForPatient,
+  listHomeVisitsForPatient,
+} from "@/lib/services/home-nursing-service";
 import { can } from "@/lib/auth/authorize";
 import { calculateAge } from "@/lib/utils/age";
 import { buildPatientTimeline } from "@/lib/utils/timeline";
@@ -58,6 +61,7 @@ export default async function PatientDetailPage({
     rehabAssessments,
     therapySessions,
     homeNursingAssessments,
+    homeVisits,
     canCreateConsultation,
     canManageReferrals,
     canCreatePrescription,
@@ -72,6 +76,7 @@ export default async function PatientDetailPage({
     listRehabAssessmentsForPatient(user, patient.id),
     listTherapySessionsForPatient(user, patient.id),
     listHomeNursingAssessmentsForPatient(user, patient.id),
+    listHomeVisitsForPatient(user, patient.id),
     user ? can(user, "consultation:create") : Promise.resolve(false),
     user ? can(user, "referral:manage") : Promise.resolve(false),
     user ? can(user, "prescription:create") : Promise.resolve(false),
@@ -88,6 +93,7 @@ export default async function PatientDetailPage({
     rehabAssessments,
     therapySessions,
     homeNursingAssessments,
+    homeVisits,
   });
 
   return (
@@ -143,6 +149,7 @@ export default async function PatientDetailPage({
           patientId={patient.id}
           assessments={homeNursingAssessments}
           canManage={canManageHomeNursing}
+          canScheduleAppointments={canManageAppointments}
         />
       )}
     </div>

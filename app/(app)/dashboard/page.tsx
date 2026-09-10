@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import {
   getMedicalSchedule,
   getRehabSchedule,
+  getHomeNursingSchedule,
 } from "@/lib/services/appointment-service";
 import { DepartmentSchedule } from "@/components/dashboard/department-schedule";
 
@@ -17,6 +18,7 @@ const SCHEDULE_BY_ROLE: Record<
   PHYSIOTHERAPIST: { title: "Rehabilitation Dashboard", load: getRehabSchedule },
   SPEECH_THERAPIST: { title: "Rehabilitation Dashboard", load: getRehabSchedule },
   OCCUPATIONAL_THERAPIST: { title: "Rehabilitation Dashboard", load: getRehabSchedule },
+  HOME_NURSING_STAFF: { title: "Home Nursing Dashboard", load: getHomeNursingSchedule },
 };
 
 export default async function DashboardPage() {
