@@ -152,3 +152,42 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
 }
+
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+}
+
+model Patient {
+  id String @id @default(cuid())
+
+  // Human-friendly record number, e.g. "P00001" (derived from mrnNumber in
+  // application code). The Postgres autoincrement makes this race-safe
+  // under concurrent registrations - "find the max and add 1" in app code
+  // would not be.
+  mrnNumber Int @unique @default(autoincrement())
+
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime
+  sex         Sex
+
+  address String?
+  phone   String?
+  email   String?
+
+  emergencyContactName  String?
+  emergencyContactPhone String?
+
+  // Free-text for now. Structured allergy severity/reaction tracking is a
+  // future enhancement, not needed for the first pass.
+  allergies           String?
+  medicalHistoryNotes String?
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([lastName, firstName])
+}
