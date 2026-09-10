@@ -49,7 +49,7 @@ export async function listReferralsForPatient(
     where: { patientId },
     include: {
       fromDepartment: { select: { name: true } },
-      toDepartment: { select: { name: true } },
+      toDepartment: { select: { name: true, code: true } },
       referringUser: { select: { fullName: true } },
     },
     orderBy: { createdAt: "desc" },

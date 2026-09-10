@@ -1,0 +1,139 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth/session";
+import { getRehabAssessment } from "@/lib/services/rehab-service";
+import { formatMrn } from "@/lib/services/patient-service";
+import { can } from "@/lib/auth/authorize";
+import { NewTreatmentPlanForm } from "@/components/rehab/new-treatment-plan-form";
+
+const DISCIPLINE_LABELS: Record<string, string> = {
+  PHYSIOTHERAPY: "Physiotherapy",
+  SPEECH_THERAPY: "Speech Therapy",
+  OCCUPATIONAL_THERAPY: "Occupational Therapy",
+};
+
+export default async function RehabAssessmentPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const user = await getCurrentUser();
+  const assessment = await getRehabAssessment(user, id);
+
+  if (!assessment) {
+    notFound();
+  }
+
+  const canManage = user ? await can(user, "rehab:manage") : false;
+
+  return (
+    <div>
+      <div className="mb-4">
+        <Link
+          href={`/patients/${assessment.patient.id}?tab=rehabilitation`}
+          className="text-sm text-slate-500 hover:underline"
+        >
+          &larr; Back to patient
+        </Link>
+        <h1 className="mt-1 text-lg font-semibold text-slate-900">
+          {DISCIPLINE_LABELS[assessment.discipline]} Assessment
+        </h1>
+        <p className="text-sm text-slate-500">
+          {assessment.patient.lastName}, {assessment.patient.firstName} (
+          {formatMrn(assessment.patient.mrnNumber)}) - by{" "}
+          {assessment.therapist.fullName} - {assessment.createdAt.toDateString()}
+        </p>
+      </div>
+
+      <div className="rounded border border-slate-200 bg-white p-4">
+        <h2 className="mb-2 text-sm font-semibold text-slate-700">Findings</h2>
+        <p className="mb-3 text-sm text-slate-700">{assessment.findings}</p>
+
+        {assessment.functionalLimitations && (
+          <>
+            <h2 className="mb-1 text-sm font-semibold text-slate-700">
+              Functional limitations
+            </h2>
+            <p className="mb-3 text-sm text-slate-700">
+              {assessment.functionalLimitations}
+            </p>
+          </>
+        )}
+
+        {assessment.goals && (
+          <>
+            <h2 className="mb-1 text-sm font-semibold text-slate-700">Goals</h2>
+            <p className="mb-3 text-sm text-slate-700">{assessment.goals}</p>
+          </>
+        )}
+
+        {assessment.precautions && (
+          <>
+            <h2 className="mb-1 text-sm font-semibold text-slate-700">
+              Precautions
+            </h2>
+            <p className="mb-3 text-sm text-slate-700">{assessment.precautions}</p>
+          </>
+        )}
+
+        {assessment.notes && (
+          <>
+            <h2 className="mb-1 text-sm font-semibold text-slate-700">Notes</h2>
+            <p className="text-sm text-slate-700">{assessment.notes}</p>
+          </>
+        )}
+      </div>
+
+      <div className="mt-6 rounded border border-slate-200 bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold text-slate-700">
+          Treatment Plan
+        </h2>
+
+        {assessment.treatmentPlan ? (
+          <dl className="flex flex-col gap-2 text-sm">
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Goals
+              </dt>
+              <dd className="text-slate-700">{assessment.treatmentPlan.goals}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Frequency
+              </dt>
+              <dd className="text-slate-700">{assessment.treatmentPlan.frequency}</dd>
+            </div>
+            {assessment.treatmentPlan.reviewDate && (
+              <div>
+                <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Review date
+                </dt>
+                <dd className="text-slate-700">
+                  {assessment.treatmentPlan.reviewDate.toDateString()}
+                </dd>
+              </div>
+            )}
+            {assessment.treatmentPlan.precautions && (
+              <div>
+                <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Precautions
+                </dt>
+                <dd className="text-slate-700">
+                  {assessment.treatmentPlan.precautions}
+                </dd>
+              </div>
+            )}
+            <span className="w-fit rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+              {assessment.treatmentPlan.status}
+            </span>
+          </dl>
+        ) : canManage ? (
+          <NewTreatmentPlanForm assessmentId={assessment.id} />
+        ) : (
+          <p className="text-sm text-slate-500">No treatment plan yet.</p>
+        )}
+      </div>
+    </div>
+  );
+}

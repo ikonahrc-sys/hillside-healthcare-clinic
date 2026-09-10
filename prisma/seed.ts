@@ -13,6 +13,7 @@ const PERMISSIONS = [
   { key: "referral:manage", description: "Create, accept, or decline referrals" },
   { key: "appointment:manage", description: "Schedule and view scheduled appointments" },
   { key: "inventory:manage", description: "View stock and receive new medicine batches" },
+  { key: "rehab:manage", description: "Create rehabilitation assessments and treatment plans" },
   { key: "user:manage", description: "Create/edit user accounts and roles" },
   { key: "placement:manage", description: "Manage student clinical placements" },
 ] as const;
@@ -33,6 +34,9 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     "referral:manage",
     "inventory:manage",
   ],
+  PHYSIOTHERAPIST: ["patient:read", "referral:manage", "rehab:manage"],
+  SPEECH_THERAPIST: ["patient:read", "referral:manage", "rehab:manage"],
+  OCCUPATIONAL_THERAPIST: ["patient:read", "referral:manage", "rehab:manage"],
 };
 
 // Dev-only test accounts, one per role, so every phase can be tested as the
@@ -40,12 +44,16 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
 const TEST_USERS = [
   { email: "doctor@hillside.local", fullName: "Dr. Sarah Mitchell", roleName: "DOCTOR" },
   { email: "pharmacist@hillside.local", fullName: "James Okafor", roleName: "PHARMACIST" },
+  { email: "physio@hillside.local", fullName: "Lisa Chen", roleName: "PHYSIOTHERAPIST" },
+  { email: "speech@hillside.local", fullName: "Marcus Reyes", roleName: "SPEECH_THERAPIST" },
+  { email: "ot@hillside.local", fullName: "Priya Nair", roleName: "OCCUPATIONAL_THERAPIST" },
 ] as const;
 
 const DEPARTMENTS = [
   { name: "Administration", code: "ADMIN" },
   { name: "Medical", code: "MED" },
   { name: "Pharmacy", code: "PHARM" },
+  { name: "Rehabilitation", code: "REHAB" },
 ] as const;
 
 // A small starter catalog so prescribing is actually testable. No
@@ -123,6 +131,9 @@ async function main() {
   const ROLE_DEPARTMENT: Record<string, string> = {
     DOCTOR: "MED",
     PHARMACIST: "PHARM",
+    PHYSIOTHERAPIST: "REHAB",
+    SPEECH_THERAPIST: "REHAB",
+    OCCUPATIONAL_THERAPIST: "REHAB",
   };
 
   const testUsers: string[] = [];

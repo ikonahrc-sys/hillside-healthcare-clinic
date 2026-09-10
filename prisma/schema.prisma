@@ -91,6 +91,8 @@ model User {
   appointmentsAsStaff    Appointment[]          @relation("StaffAppointments")
   inventoryTransactions  InventoryTransaction[]
   itemsDispensed         PrescriptionItem[]     @relation("DispensingUser")
+  rehabAssessments       RehabAssessment[]      @relation("RehabAssessmentTherapist")
+  rehabTreatmentPlans    RehabTreatmentPlan[]   @relation("RehabTreatmentPlanTherapist")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -196,11 +198,13 @@ model Patient {
   allergies           String?
   medicalHistoryNotes String?
 
-  consultations Consultation[]
-  diagnoses     Diagnosis[]
-  referrals     Referral[]
-  prescriptions Prescription[]
-  appointments  Appointment[]
+  consultations       Consultation[]
+  diagnoses           Diagnosis[]
+  referrals           Referral[]
+  prescriptions       Prescription[]
+  appointments        Appointment[]
+  rehabAssessments    RehabAssessment[]
+  rehabTreatmentPlans RehabTreatmentPlan[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -319,6 +323,8 @@ model Referral {
   respondedByUser   User?     @relation("RespondingUser", fields: [respondedByUserId], references: [id])
   respondedAt       DateTime?
   responseNotes     String?
+
+  rehabAssessments RehabAssessment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -511,4 +517,83 @@ model InventoryTransaction {
 
   @@index([medicineBatchId])
   @@index([createdAt])
+}
+
+// Rehabilitation is one department; these are disciplines within it, not
+// separate departments - a referral goes to Rehabilitation generally and
+// gets triaged to a discipline at assessment time.
+enum RehabDiscipline {
+  PHYSIOTHERAPY
+  SPEECH_THERAPY
+  OCCUPATIONAL_THERAPY
+}
+
+model RehabAssessment {
+  id String @id @default(cuid())
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  // Optional - an assessment doesn't have to trace back to a specific
+  // referral (e.g. a therapist picking up a patient already known to the
+  // department), but usually will.
+  referralId String?
+  referral   Referral? @relation(fields: [referralId], references: [id])
+
+  therapistId String
+  therapist   User   @relation("RehabAssessmentTherapist", fields: [therapistId], references: [id])
+
+  discipline RehabDiscipline
+
+  findings              String
+  functionalLimitations String?
+  goals                 String?
+  precautions           String?
+  notes                 String?
+
+  treatmentPlan RehabTreatmentPlan?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([therapistId])
+}
+
+enum TreatmentPlanStatus {
+  ACTIVE
+  COMPLETED
+  DISCONTINUED
+}
+
+// The structured entity Consultation's free-text treatmentNotes
+// deliberately deferred twice in Phase 2 - Rehab actually needs goals,
+// frequency, and a review date that persist and get revisited across
+// many sessions, not a one-time note attached to a single visit.
+model RehabTreatmentPlan {
+  id String @id @default(cuid())
+
+  assessmentId String          @unique
+  assessment   RehabAssessment @relation(fields: [assessmentId], references: [id])
+
+  // Denormalized alongside assessmentId, same reasoning as Diagnosis.
+  // patientId - the patient's Rehab history is a query the Timeline and
+  // Rehabilitation tab will run constantly.
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  therapistId String
+  therapist   User   @relation("RehabTreatmentPlanTherapist", fields: [therapistId], references: [id])
+
+  goals       String
+  frequency   String
+  reviewDate  DateTime?
+  precautions String?
+  status      TreatmentPlanStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([therapistId])
 }

@@ -6,6 +6,7 @@ const TABS = [
   { key: "consultations", label: "Consultations" },
   { key: "prescriptions", label: "Prescriptions" },
   { key: "referrals", label: "Referrals" },
+  { key: "rehabilitation", label: "Rehabilitation" },
 ] as const;
 
 export function PatientTabs({
