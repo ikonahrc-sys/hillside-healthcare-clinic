@@ -80,6 +80,7 @@ model User {
   placementsAsStudent    ClinicalPlacement[] @relation("StudentPlacements")
   placementsAsSupervisor ClinicalPlacement[] @relation("SupervisorPlacements")
   sessions               Session[]
+  consultationsAsDoctor  Consultation[]      @relation("DoctorConsultations")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -185,9 +186,85 @@ model Patient {
   allergies           String?
   medicalHistoryNotes String?
 
+  consultations Consultation[]
+  diagnoses     Diagnosis[]
+
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   @@index([lastName, firstName])
+}
+
+model Consultation {
+  id String @id @default(cuid())
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  doctorId String
+  doctor   User   @relation("DoctorConsultations", fields: [doctorId], references: [id])
+
+  consultationDate DateTime @default(now())
+
+  chiefComplaint          String
+  historyOfPresentIllness String?
+  examinationNotes        String?
+  assessment              String?
+  // Free text for now - a structured TreatmentPlan entity (goals,
+  // frequency, review dates) waits until Rehabilitation actually needs
+  // that structure in Phase 4, rather than building it speculatively now.
+  treatmentNotes          String?
+  notes                   String?
+
+  vitals    VitalSigns?
+  diagnoses Diagnosis[]
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([consultationDate])
+}
+
+model VitalSigns {
+  id String @id @default(cuid())
+
+  consultationId String       @unique
+  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+
+  temperatureC            Float?
+  heartRateBpm            Int?
+  respiratoryRatePerMin   Int?
+  bloodPressureSystolic   Int?
+  bloodPressureDiastolic  Int?
+  oxygenSaturationPercent Int?
+  weightKg                Float?
+  heightCm                Float?
+
+  recordedAt DateTime @default(now())
+}
+
+model Diagnosis {
+  id String @id @default(cuid())
+
+  // Denormalized alongside consultationId - the patient's diagnosis
+  // history (Overview tab, future Timeline) is a query we'll run
+  // constantly, and this avoids joining through Consultation every time.
+  // Set once at creation, never changes independently.
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  consultationId String
+  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+
+  description String
+  isPrimary   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@index([patientId])
+  @@index([consultationId])
 }

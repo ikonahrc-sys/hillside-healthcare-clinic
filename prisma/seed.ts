@@ -7,6 +7,7 @@ import { hashPassword } from "../lib/auth/password";
 const PERMISSIONS = [
   { key: "patient:read", description: "Read a patient's full record" },
   { key: "patient:write", description: "Create or update a patient's record" },
+  { key: "consultation:create", description: "Author a medical consultation" },
   { key: "prescription:dispense", description: "Dispense a prescription" },
   { key: "referral:manage", description: "Create, accept, or decline referrals" },
   { key: "user:manage", description: "Create/edit user accounts and roles" },
@@ -15,16 +16,34 @@ const PERMISSIONS = [
 
 const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   ADMINISTRATOR: PERMISSIONS.map((p) => p.key),
-  DOCTOR: ["patient:read", "patient:write", "referral:manage"],
+  DOCTOR: ["patient:read", "patient:write", "consultation:create", "referral:manage"],
   PHARMACIST: ["patient:read", "prescription:dispense"],
 };
 
+// Dev-only test accounts, one per role, so every phase can be tested as the
+// role it's actually built for - not just as an all-permissions admin.
+const TEST_USERS = [
+  { email: "doctor@hillside.local", fullName: "Dr. Sarah Mitchell", roleName: "DOCTOR" },
+  { email: "pharmacist@hillside.local", fullName: "James Okafor", roleName: "PHARMACIST" },
+] as const;
+
+const DEPARTMENTS = [
+  { name: "Administration", code: "ADMIN" },
+  { name: "Medical", code: "MED" },
+  { name: "Pharmacy", code: "PHARM" },
+] as const;
+
 async function main() {
-  const department = await prisma.department.upsert({
-    where: { code: "ADMIN" },
-    update: {},
-    create: { name: "Administration", code: "ADMIN" },
-  });
+  const departmentsByCode = new Map<string, { id: string; code: string }>();
+  for (const dept of DEPARTMENTS) {
+    const created = await prisma.department.upsert({
+      where: { code: dept.code },
+      update: {},
+      create: dept,
+    });
+    departmentsByCode.set(created.code, created);
+  }
+  const department = departmentsByCode.get("ADMIN")!;
 
   const permissionsByKey = new Map<string, { id: string; key: string }>();
   for (const permission of PERMISSIONS) {
@@ -73,11 +92,38 @@ async function main() {
     },
   });
 
+  const ROLE_DEPARTMENT: Record<string, string> = {
+    DOCTOR: "MED",
+    PHARMACIST: "PHARM",
+  };
+
+  const testUsers: string[] = [];
+  for (const testUser of TEST_USERS) {
+    const role = rolesByName.get(testUser.roleName);
+    if (!role) throw new Error(`Unknown role for test user: ${testUser.roleName}`);
+    const deptCode = ROLE_DEPARTMENT[testUser.roleName];
+    const dept = deptCode ? departmentsByCode.get(deptCode) : undefined;
+
+    const user = await prisma.user.upsert({
+      where: { email: testUser.email },
+      update: {},
+      create: {
+        email: testUser.email,
+        passwordHash,
+        fullName: testUser.fullName,
+        roleId: role.id,
+        departmentId: dept?.id,
+      },
+    });
+    testUsers.push(user.email);
+  }
+
   console.log("Seeded:", {
-    department: department.code,
+    departments: [...departmentsByCode.keys()],
     roles: [...rolesByName.keys()],
     permissions: [...permissionsByKey.keys()],
     adminUser: adminUser.email,
+    testUsers,
   });
 }
 
