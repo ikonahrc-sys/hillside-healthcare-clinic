@@ -4,8 +4,9 @@ import { z } from "zod";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/password";
-import { createSession, destroySession } from "@/lib/auth/session";
+import { createSession, destroySession, getCurrentUser } from "@/lib/auth/session";
 import { hasActivePlacement } from "@/lib/auth/placement";
+import { logAudit } from "@/lib/audit/log";
 
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -38,12 +39,33 @@ export async function loginAction(
     include: { role: true, placementsAsStudent: true },
   });
 
-  if (!user) return genericError;
+  if (!user) {
+    await logAudit({
+      actorEmail: email,
+      action: "LOGIN_FAILED",
+      metadata: { reason: "unknown_email" },
+    });
+    return genericError;
+  }
 
   const passwordMatches = await verifyPassword(password, user.passwordHash);
-  if (!passwordMatches) return genericError;
+  if (!passwordMatches) {
+    await logAudit({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: "LOGIN_FAILED",
+      metadata: { reason: "wrong_password" },
+    });
+    return genericError;
+  }
 
   if (user.status !== "ACTIVE") {
+    await logAudit({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: "LOGIN_FAILED",
+      metadata: { reason: "inactive_account", status: user.status },
+    });
     return { error: "This account is not active. Contact an administrator." };
   }
 
@@ -51,6 +73,12 @@ export async function loginAction(
     user.role.name === "STUDENT" &&
     !hasActivePlacement(user.placementsAsStudent)
   ) {
+    await logAudit({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: "LOGIN_FAILED",
+      metadata: { reason: "no_active_placement" },
+    });
     return {
       error:
         "No active clinical placement found. Access is only available during an active placement.",
@@ -58,10 +86,15 @@ export async function loginAction(
   }
 
   await createSession(user.id);
+  await logAudit({ actorId: user.id, actorEmail: user.email, action: "LOGIN" });
   redirect("/dashboard");
 }
 
 export async function logoutAction() {
+  const user = await getCurrentUser();
   await destroySession();
+  if (user) {
+    await logAudit({ actorId: user.id, actorEmail: user.email, action: "LOGOUT" });
+  }
   redirect("/login");
 }

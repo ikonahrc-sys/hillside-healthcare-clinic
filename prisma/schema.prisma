@@ -130,3 +130,25 @@ model ClinicalPlacement {
   @@index([status])
   @@index([startDate, endDate])
 }
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  // Snapshot, not a foreign key - must survive a user being deleted, and
+  // must be able to record events with no authenticated actor at all
+  // (e.g. a failed login attempt).
+  actorId    String?
+  actorEmail String?
+
+  action     String
+  entityType String?
+  entityId   String?
+  metadata   Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+}
