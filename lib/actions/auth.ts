@@ -15,6 +15,13 @@ const loginSchema = z.object({
 
 export type LoginState = { error: string } | null;
 
+// Reuses the audit log rather than adding lockout-tracking columns to
+// User - every failed attempt is already recorded there with the
+// attempted email, so counting recent ones is enough to throttle
+// brute-forcing without any new schema.
+const LOGIN_ATTEMPT_LIMIT = 5;
+const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+
 export async function loginAction(
   _prevState: LoginState,
   formData: FormData,
@@ -33,6 +40,20 @@ export async function loginAction(
   // Same error message for "no such user" and "wrong password" - being
   // specific here tells an attacker which emails are registered.
   const genericError: LoginState = { error: "Invalid email or password." };
+  const rateLimitedError: LoginState = {
+    error: "Too many failed attempts for this account. Please wait 15 minutes and try again.",
+  };
+
+  const recentFailures = await prisma.auditLog.count({
+    where: {
+      actorEmail: email,
+      action: "LOGIN_FAILED",
+      createdAt: { gte: new Date(Date.now() - LOGIN_ATTEMPT_WINDOW_MS) },
+    },
+  });
+  if (recentFailures >= LOGIN_ATTEMPT_LIMIT) {
+    return rateLimitedError;
+  }
 
   const user = await prisma.user.findUnique({
     where: { email },

@@ -65,6 +65,18 @@ export async function createPlacement(
     throw new Error("Selected department does not exist");
   }
 
+  // Unlike student/department, this one was previously taken as-is from
+  // the form with no existence check at all - a crafted request could
+  // set any string as supervisorId, including a student's own id.
+  if (input.supervisorId) {
+    const supervisor = await prisma.user.findFirst({
+      where: { id: input.supervisorId, role: { name: { not: "STUDENT" } } },
+    });
+    if (!supervisor) {
+      throw new Error("Selected supervisor does not exist");
+    }
+  }
+
   // No overlapping placements for the same student - a student is on
   // exactly one placement at a time, regardless of that placement's
   // status label.
