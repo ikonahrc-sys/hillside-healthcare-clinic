@@ -2,7 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { prescriptionInputSchema } from "@/lib/validation/prescription";
-import { createPrescription } from "@/lib/services/prescription-service";
+import {
+  createPrescription,
+  dispensePrescriptionItem,
+} from "@/lib/services/prescription-service";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AuthorizationError } from "@/lib/auth/authorize";
 
@@ -37,4 +40,36 @@ export async function createPrescriptionAction(
   }
 
   redirect(`/patients/${patientId}`);
+}
+
+export async function dispenseItemAction(formData: FormData) {
+  const itemId = formData.get("itemId");
+  const batchId = formData.get("batchId");
+  const prescriptionId = formData.get("prescriptionId");
+
+  if (
+    typeof itemId !== "string" ||
+    typeof batchId !== "string" ||
+    typeof prescriptionId !== "string"
+  ) {
+    return;
+  }
+
+  const user = await getCurrentUser();
+
+  try {
+    await dispensePrescriptionItem(user, itemId, batchId);
+  } catch (e) {
+    const message =
+      e instanceof AuthorizationError
+        ? "You are not authorized to dispense prescriptions."
+        : e instanceof Error
+          ? e.message
+          : "Could not dispense this item.";
+    redirect(
+      `/pharmacy/prescriptions/${prescriptionId}?error=${encodeURIComponent(message)}`,
+    );
+  }
+
+  redirect(`/pharmacy/prescriptions/${prescriptionId}`);
 }

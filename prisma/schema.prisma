@@ -90,6 +90,7 @@ model User {
   prescriptionsWritten   Prescription[]         @relation("PrescribingUser")
   appointmentsAsStaff    Appointment[]          @relation("StaffAppointments")
   inventoryTransactions  InventoryTransaction[]
+  itemsDispensed         PrescriptionItem[]     @relation("DispensingUser")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -392,6 +393,17 @@ model PrescriptionItem {
   dosageInstructions String
   quantity           Int
 
+  // Null until dispensed. No partial-quantity or multi-batch splitting yet
+  // (Phase 3 step 1's stated scope) - an item is either not dispensed at
+  // all, or fully dispensed against exactly one batch.
+  dispensedAt          DateTime?
+  dispensedFromBatchId String?
+  dispensedFromBatch   MedicineBatch? @relation(fields: [dispensedFromBatchId], references: [id])
+  dispensedByUserId    String?
+  dispensedByUser      User?          @relation("DispensingUser", fields: [dispensedByUserId], references: [id])
+
+  inventoryTransactions InventoryTransaction[]
+
   createdAt DateTime @default(now())
 
   @@index([prescriptionId])
@@ -457,7 +469,8 @@ model MedicineBatch {
 
   receivedAt DateTime @default(now())
 
-  transactions InventoryTransaction[]
+  transactions   InventoryTransaction[]
+  dispensedItems PrescriptionItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -486,6 +499,11 @@ model InventoryTransaction {
 
   performedByUserId String
   performedByUser   User   @relation(fields: [performedByUserId], references: [id])
+
+  // Links a DISPENSED transaction back to the specific prescription item
+  // it fulfilled - the traceability the ledger design exists for.
+  relatedPrescriptionItemId String?
+  relatedPrescriptionItem   PrescriptionItem? @relation(fields: [relatedPrescriptionItemId], references: [id])
 
   notes String?
 
