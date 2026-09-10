@@ -2,6 +2,23 @@ import "dotenv/config";
 import { prisma } from "../lib/db";
 import { hashPassword } from "../lib/auth/password";
 
+// The starter permission set. This will grow as each department's
+// workflows get built - keep keys as "resource:action" pairs.
+const PERMISSIONS = [
+  { key: "patient:read", description: "Read a patient's full record" },
+  { key: "patient:write", description: "Create or update a patient's record" },
+  { key: "prescription:dispense", description: "Dispense a prescription" },
+  { key: "referral:manage", description: "Create, accept, or decline referrals" },
+  { key: "user:manage", description: "Create/edit user accounts and roles" },
+  { key: "placement:manage", description: "Manage student clinical placements" },
+] as const;
+
+const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
+  ADMINISTRATOR: PERMISSIONS.map((p) => p.key),
+  DOCTOR: ["patient:read", "patient:write", "referral:manage"],
+  PHARMACIST: ["patient:read", "prescription:dispense"],
+};
+
 async function main() {
   const department = await prisma.department.upsert({
     where: { code: "ADMIN" },
@@ -9,12 +26,39 @@ async function main() {
     create: { name: "Administration", code: "ADMIN" },
   });
 
-  const adminRole = await prisma.role.upsert({
-    where: { name: "ADMINISTRATOR" },
-    update: {},
-    create: { name: "ADMINISTRATOR", description: "Full administrative access" },
-  });
+  const permissionsByKey = new Map<string, { id: string; key: string }>();
+  for (const permission of PERMISSIONS) {
+    const created = await prisma.permission.upsert({
+      where: { key: permission.key },
+      update: { description: permission.description },
+      create: permission,
+    });
+    permissionsByKey.set(created.key, created);
+  }
 
+  const rolesByName = new Map<string, { id: string; name: string }>();
+  for (const roleName of Object.keys(ROLE_PERMISSIONS)) {
+    const role = await prisma.role.upsert({
+      where: { name: roleName },
+      update: {},
+      create: { name: roleName },
+    });
+    rolesByName.set(role.name, role);
+
+    for (const permissionKey of ROLE_PERMISSIONS[roleName]) {
+      const permission = permissionsByKey.get(permissionKey);
+      if (!permission) throw new Error(`Unknown permission key: ${permissionKey}`);
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: { roleId: role.id, permissionId: permission.id },
+        },
+        update: {},
+        create: { roleId: role.id, permissionId: permission.id },
+      });
+    }
+  }
+
+  const adminRole = rolesByName.get("ADMINISTRATOR")!;
   const passwordHash = await hashPassword("Password123!");
 
   const adminUser = await prisma.user.upsert({
@@ -29,7 +73,12 @@ async function main() {
     },
   });
 
-  console.log("Seeded:", { department, adminRole, adminUser: adminUser.email });
+  console.log("Seeded:", {
+    department: department.code,
+    roles: [...rolesByName.keys()],
+    permissions: [...permissionsByKey.keys()],
+    adminUser: adminUser.email,
+  });
 }
 
 main()
