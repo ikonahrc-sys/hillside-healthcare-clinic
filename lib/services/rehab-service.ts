@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { authorize } from "@/lib/auth/authorize";
+import { authorizeClinicalAuthor } from "@/lib/auth/clinical-author";
 import { logAudit } from "@/lib/audit/log";
 import type { CurrentUser } from "@/lib/auth/session";
 import type {
@@ -18,7 +19,7 @@ export async function listRehabAssessmentsForPatient(
   return prisma.rehabAssessment.findMany({
     where: { patientId },
     include: {
-      therapist: { select: { fullName: true } },
+      therapist: { select: { fullName: true, role: { select: { name: true } } } },
       treatmentPlan: true,
     },
     orderBy: { createdAt: "desc" },
@@ -35,7 +36,8 @@ export async function getRehabAssessment(
     where: { id: assessmentId },
     include: {
       patient: { select: { id: true, firstName: true, lastName: true, mrnNumber: true } },
-      therapist: { select: { fullName: true } },
+      therapist: { select: { fullName: true, role: { select: { name: true } } } },
+      coSignedBy: { select: { fullName: true } },
       treatmentPlan: {
         include: {
           therapySessions: {
@@ -54,7 +56,11 @@ export async function createRehabAssessment(
   input: RehabAssessmentInput,
   referralId?: string,
 ) {
-  const authedUser = await authorize(user, "rehab:manage");
+  const { authedUser, requiresCoSign } = await authorizeClinicalAuthor(
+    user,
+    "rehab:manage",
+    "REHAB",
+  );
 
   const patient = await prisma.patient.findFirst({
     where: { id: patientId, deletedAt: null },
@@ -83,10 +89,47 @@ export async function createRehabAssessment(
     action: "REHAB_ASSESSMENT_CREATE",
     entityType: "RehabAssessment",
     entityId: assessment.id,
-    metadata: { patientId: patient.id, discipline: input.discipline },
+    metadata: { patientId: patient.id, discipline: input.discipline, studentAuthored: requiresCoSign },
   });
 
   return assessment;
+}
+
+export async function coSignRehabAssessment(
+  user: CurrentUser | null,
+  assessmentId: string,
+) {
+  const authedUser = await authorize(user, "rehab:manage");
+
+  const assessment = await prisma.rehabAssessment.findUnique({
+    where: { id: assessmentId },
+    include: { therapist: { select: { role: { select: { name: true } } } } },
+  });
+  if (!assessment) {
+    throw new Error("Assessment not found");
+  }
+  if (assessment.therapist.role.name !== "STUDENT") {
+    throw new Error("This assessment does not require a co-sign.");
+  }
+  if (assessment.coSignedAt) {
+    throw new Error("This assessment has already been co-signed.");
+  }
+
+  const updated = await prisma.rehabAssessment.update({
+    where: { id: assessment.id },
+    data: { coSignedByUserId: authedUser.id, coSignedAt: new Date() },
+  });
+
+  await logAudit({
+    actorId: authedUser.id,
+    actorEmail: authedUser.email,
+    action: "REHAB_ASSESSMENT_COSIGN",
+    entityType: "RehabAssessment",
+    entityId: assessment.id,
+    metadata: { patientId: assessment.patientId, studentTherapistId: assessment.therapistId },
+  });
+
+  return updated;
 }
 
 export async function createTreatmentPlan(

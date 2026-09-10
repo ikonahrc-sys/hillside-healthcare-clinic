@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { authorize } from "@/lib/auth/authorize";
 import { logAudit } from "@/lib/audit/log";
-import { getActivePlacement } from "@/lib/auth/placement";
+import { getActivePlacementDepartment } from "@/lib/auth/placement";
 import type { CurrentUser } from "@/lib/auth/session";
 import type { PatientInput } from "@/lib/validation/patient";
 
@@ -52,14 +52,7 @@ const DEPARTMENT_RECORD_FILTER: Record<string, object> = {
 };
 
 export async function getActiveStudentPlacement(user: CurrentUser) {
-  const placements = await prisma.clinicalPlacement.findMany({
-    where: { studentId: user.id },
-    include: { department: { select: { id: true, name: true, code: true } } },
-  });
-  const active = getActivePlacement(placements);
-  return active
-    ? placements.find((p) => p.id === active.id)?.department
-    : undefined;
+  return getActivePlacementDepartment(user.id);
 }
 
 // A student only sees patients relevant to whichever department their

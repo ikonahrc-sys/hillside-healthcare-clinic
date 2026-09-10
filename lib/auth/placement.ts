@@ -1,3 +1,5 @@
+import "server-only";
+import { prisma } from "@/lib/db";
 import type { ClinicalPlacement } from "@/app/generated/prisma/client";
 
 /**
@@ -34,4 +36,16 @@ export function getActivePlacement(
       placement.startDate <= now &&
       placement.endDate >= now,
   );
+}
+
+/** The department of a student's currently active placement, if any -
+ * shared by both "which patients does this student see" (patient-service)
+ * and "can this student author records in this department" (clinical-author). */
+export async function getActivePlacementDepartment(userId: string) {
+  const placements = await prisma.clinicalPlacement.findMany({
+    where: { studentId: userId },
+    include: { department: { select: { id: true, name: true, code: true } } },
+  });
+  const active = getActivePlacement(placements);
+  return active ? placements.find((p) => p.id === active.id)?.department : undefined;
 }

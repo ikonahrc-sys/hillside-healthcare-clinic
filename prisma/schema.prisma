@@ -92,6 +92,7 @@ model User {
   inventoryTransactions  InventoryTransaction[]
   itemsDispensed         PrescriptionItem[]     @relation("DispensingUser")
   rehabAssessments       RehabAssessment[]      @relation("RehabAssessmentTherapist")
+  rehabAssessmentsCoSigned RehabAssessment[]    @relation("RehabAssessmentCoSigner")
   rehabTreatmentPlans    RehabTreatmentPlan[]   @relation("RehabTreatmentPlanTherapist")
   therapySessions        TherapySession[]       @relation("TherapySessionTherapist")
   homeNursingAssessments HomeNursingAssessment[] @relation("HomeNursingAssessmentNurse")
@@ -551,6 +552,16 @@ model RehabAssessment {
 
   therapistId String
   therapist   User   @relation("RehabAssessmentTherapist", fields: [therapistId], references: [id])
+
+  // Set when a STUDENT authors this assessment during an active
+  // placement (see authorizeClinicalAuthor in lib/auth/clinical-author.ts).
+  // Null for a normal staff-authored record, which never needs a co-sign
+  // at all - "pending co-sign" is therefore
+  // therapist.role === STUDENT && coSignedAt === null, not a separate
+  // stored flag that could drift out of sync.
+  coSignedByUserId String?
+  coSignedBy       User?     @relation("RehabAssessmentCoSigner", fields: [coSignedByUserId], references: [id])
+  coSignedAt       DateTime?
 
   discipline RehabDiscipline
 

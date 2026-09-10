@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getRehabAssessment } from "@/lib/services/rehab-service";
 import { formatMrn } from "@/lib/services/patient-service";
 import { can } from "@/lib/auth/authorize";
+import { coSignRehabAssessmentAction } from "@/lib/actions/rehab";
 import { NewTreatmentPlanForm } from "@/components/rehab/new-treatment-plan-form";
 import { LogTherapySessionForm } from "@/components/rehab/log-therapy-session-form";
 
@@ -27,6 +28,8 @@ export default async function RehabAssessmentPage({
   }
 
   const canManage = user ? await can(user, "rehab:manage") : false;
+  const isPendingCoSign =
+    assessment.therapist.role.name === "STUDENT" && !assessment.coSignedAt;
 
   return (
     <div>
@@ -46,6 +49,33 @@ export default async function RehabAssessmentPage({
           {assessment.therapist.fullName} - {assessment.createdAt.toDateString()}
         </p>
       </div>
+
+      {isPendingCoSign && (
+        <div className="mb-4 flex items-center justify-between rounded border border-red-200 bg-red-50 p-3">
+          <p className="text-sm text-red-800">
+            Student-authored - pending supervisor co-sign before this is part
+            of the official record.
+          </p>
+          {canManage && (
+            <form action={coSignRehabAssessmentAction}>
+              <input type="hidden" name="assessmentId" value={assessment.id} />
+              <button
+                type="submit"
+                className="rounded bg-red-700 px-3 py-1.5 text-xs font-medium text-white"
+              >
+                Co-sign
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+
+      {assessment.coSignedAt && assessment.coSignedBy && (
+        <p className="mb-4 text-xs text-slate-500">
+          Co-signed by {assessment.coSignedBy.fullName} on{" "}
+          {assessment.coSignedAt.toDateString()}
+        </p>
+      )}
 
       <div className="rounded border border-slate-200 bg-white p-4">
         <h2 className="mb-2 text-sm font-semibold text-slate-700">Findings</h2>

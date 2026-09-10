@@ -12,12 +12,12 @@ const DISCIPLINE_LABELS: Record<string, string> = {
 export function RehabilitationTab({
   patientId,
   assessments,
-  canManage,
+  canCreateAssessment,
   canScheduleAppointments,
 }: {
   patientId: string;
   assessments: Assessment[];
-  canManage: boolean;
+  canCreateAssessment: boolean;
   canScheduleAppointments: boolean;
 }) {
   return (
@@ -31,7 +31,7 @@ export function RehabilitationTab({
             Schedule Session
           </Link>
         )}
-        {canManage && (
+        {canCreateAssessment && (
           <Link
             href={`/patients/${patientId}/rehab-assessments/new`}
             className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
@@ -62,15 +62,22 @@ export function RehabilitationTab({
                 </span>
               </div>
               <p className="mt-1 text-sm text-slate-600">{a.findings}</p>
-              {a.treatmentPlan ? (
-                <span className="mt-1 inline-block rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-                  Treatment plan active
-                </span>
-              ) : (
-                <span className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                  No treatment plan yet
-                </span>
-              )}
+              <div className="mt-1 flex flex-wrap gap-2">
+                {a.therapist.role.name === "STUDENT" && !a.coSignedAt && (
+                  <span className="inline-block rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                    Pending co-sign
+                  </span>
+                )}
+                {a.treatmentPlan ? (
+                  <span className="inline-block rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                    Treatment plan active
+                  </span>
+                ) : (
+                  <span className="inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                    No treatment plan yet
+                  </span>
+                )}
+              </div>
             </li>
           ))}
         </ul>

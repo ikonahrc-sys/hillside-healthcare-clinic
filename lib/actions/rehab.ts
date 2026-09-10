@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import {
   rehabAssessmentSchema,
   rehabTreatmentPlanSchema,
@@ -10,6 +11,7 @@ import {
   createRehabAssessment,
   createTreatmentPlan,
   logTherapySession,
+  coSignRehabAssessment,
 } from "@/lib/services/rehab-service";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AuthorizationError } from "@/lib/auth/authorize";
@@ -87,6 +89,24 @@ export async function logTherapySessionAction(
   }
 
   redirect(`/rehab-assessments/${assessmentId}`);
+}
+
+export async function coSignRehabAssessmentAction(formData: FormData) {
+  const assessmentId = formData.get("assessmentId");
+  if (typeof assessmentId !== "string") {
+    return;
+  }
+
+  const user = await getCurrentUser();
+  try {
+    await coSignRehabAssessment(user, assessmentId);
+  } catch {
+    // Most likely a race (someone else already co-signed) or a permission
+    // edge case - revalidating below shows the current real state rather
+    // than crashing to an error page.
+  } finally {
+    revalidatePath(`/rehab-assessments/${assessmentId}`);
+  }
 }
 
 export async function createTreatmentPlanAction(

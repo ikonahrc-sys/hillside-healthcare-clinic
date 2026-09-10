@@ -109,12 +109,13 @@ export function buildPatientTimeline(data: {
   }
 
   for (const ra of data.rehabAssessments) {
+    const pendingCoSign = ra.therapist.role.name === "STUDENT" && !ra.coSignedAt;
     entries.push({
       id: ra.id,
       date: ra.createdAt,
       type: "rehab",
       title: `${DISCIPLINE_LABELS[ra.discipline]} assessment`,
-      subtitle: `Rehabilitation - ${ra.therapist.fullName}${ra.treatmentPlan ? " (plan active)" : ""}`,
+      subtitle: `Rehabilitation - ${ra.therapist.fullName}${pendingCoSign ? " (pending co-sign)" : ra.treatmentPlan ? " (plan active)" : ""}`,
       isUpcoming: false,
     });
   }

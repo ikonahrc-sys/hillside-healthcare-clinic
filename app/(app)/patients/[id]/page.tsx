@@ -14,6 +14,7 @@ import {
   listHomeVisitsForPatient,
 } from "@/lib/services/home-nursing-service";
 import { can } from "@/lib/auth/authorize";
+import { canAuthorClinicalRecord } from "@/lib/auth/clinical-author";
 import { calculateAge } from "@/lib/utils/age";
 import { buildPatientTimeline } from "@/lib/utils/timeline";
 import { PatientTabs } from "@/components/patients/patient-tabs";
@@ -68,6 +69,7 @@ export default async function PatientDetailPage({
     canManageAppointments,
     canManageRehab,
     canManageHomeNursing,
+    canCreateRehabAssessment,
   ] = await Promise.all([
     listConsultationsForPatient(user, patient.id),
     listReferralsForPatient(user, patient.id),
@@ -83,6 +85,7 @@ export default async function PatientDetailPage({
     user ? can(user, "appointment:manage") : Promise.resolve(false),
     user ? can(user, "rehab:manage") : Promise.resolve(false),
     user ? can(user, "homenursing:manage") : Promise.resolve(false),
+    canAuthorClinicalRecord(user, "rehab:manage", "REHAB"),
   ]);
 
   const timelineEntries = buildPatientTimeline({
@@ -132,7 +135,7 @@ export default async function PatientDetailPage({
           patientId={patient.id}
           referrals={referrals}
           canManageReferrals={canManageReferrals}
-          canManageRehab={canManageRehab}
+          canManageRehab={canCreateRehabAssessment}
           canManageHomeNursing={canManageHomeNursing}
         />
       )}
@@ -140,7 +143,7 @@ export default async function PatientDetailPage({
         <RehabilitationTab
           patientId={patient.id}
           assessments={rehabAssessments}
-          canManage={canManageRehab}
+          canCreateAssessment={canCreateRehabAssessment}
           canScheduleAppointments={canManageAppointments}
         />
       )}
