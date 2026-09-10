@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { Nav } from "@/components/layout/nav";
 import { logoutAction } from "@/lib/actions/auth";
 import type { CurrentUser } from "@/lib/auth/session";
@@ -7,11 +8,13 @@ export function AppShell({
   user,
   canManagePlacements,
   canManageClinicalPrep,
+  unreadNotificationCount,
   children,
 }: {
   user: CurrentUser;
   canManagePlacements: boolean;
   canManageClinicalPrep: boolean;
+  unreadNotificationCount: number;
   children: ReactNode;
 }) {
   return (
@@ -34,14 +37,27 @@ export function AppShell({
             <span className="font-medium text-slate-900">{user.fullName}</span>{" "}
             <span className="text-slate-400">({user.role.name})</span>
           </div>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+          <div className="flex items-center gap-3">
+            <Link
+              href="/notifications"
+              className="relative rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
             >
-              Sign out
-            </button>
-          </form>
+              Notifications
+              {unreadNotificationCount > 0 && (
+                <span className="ml-1.5 rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-medium text-white">
+                  {unreadNotificationCount}
+                </span>
+              )}
+            </Link>
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </header>
 
         <main className="flex-1 p-6">{children}</main>

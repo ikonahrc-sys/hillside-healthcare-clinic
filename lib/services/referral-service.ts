@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { authorize, AuthorizationError } from "@/lib/auth/authorize";
 import { logAudit } from "@/lib/audit/log";
+import { notifyDepartment, createNotification } from "@/lib/services/notification-service";
 import type { CurrentUser } from "@/lib/auth/session";
 import type {
   ReferralInput,
@@ -100,6 +101,13 @@ export async function createReferral(
     metadata: { patientId: patient.id, toDepartment: toDepartment.name },
   });
 
+  await notifyDepartment(
+    toDepartment.id,
+    `New referral for ${patient.firstName} ${patient.lastName} from ${authedUser.fullName}`,
+    "/referrals",
+    authedUser.id,
+  );
+
   return referral;
 }
 
@@ -112,6 +120,10 @@ export async function respondToReferral(
 
   const referral = await prisma.referral.findUnique({
     where: { id: referralId },
+    include: {
+      patient: { select: { firstName: true, lastName: true } },
+      toDepartment: { select: { name: true } },
+    },
   });
   if (!referral) {
     throw new Error("Referral not found");
@@ -145,6 +157,12 @@ export async function respondToReferral(
     entityType: "Referral",
     entityId: referral.id,
   });
+
+  await createNotification(
+    referral.referringUserId,
+    `${referral.toDepartment.name} ${input.decision === "ACCEPTED" ? "accepted" : "declined"} your referral for ${referral.patient.firstName} ${referral.patient.lastName}`,
+    "/referrals",
+  );
 
   return updated;
 }

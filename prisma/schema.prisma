@@ -104,6 +104,7 @@ model User {
   homeVisits             HomeVisit[]            @relation("HomeVisitNurse")
   homeVisitsCoSigned     HomeVisit[]            @relation("HomeVisitCoSigner")
   clinicalPreparationNotes ClinicalPreparationNote[] @relation("ClinicalPreparationNoteStudent")
+  notifications          Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -802,4 +803,28 @@ model ClinicalPreparationNote {
 
   @@index([studentId])
   @@index([patientId])
+}
+
+// In-app only, per Phase 0's decision - no email/SMS delivery. A plain
+// notification row per recipient (broadcasting to a department creates
+// one row per user in it) rather than a separate read-receipts table,
+// since nothing here needs to distinguish "seen" from "acted on" the way
+// AuditLog does for the official record.
+model Notification {
+  id String @id @default(cuid())
+
+  recipientId String
+  recipient   User   @relation(fields: [recipientId], references: [id])
+
+  message String
+  // Where clicking the notification should take the user - a specific
+  // referral, patient, etc. Optional since not every notification needs
+  // a destination.
+  link String?
+
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([recipientId, readAt])
 }

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/authorize";
+import { countUnreadNotifications } from "@/lib/services/notification-service";
 import { AppShell } from "@/components/layout/app-shell";
 
 export default async function AppLayout({
@@ -16,12 +17,14 @@ export default async function AppLayout({
 
   const canManagePlacements = await can(user, "placement:manage");
   const canManageClinicalPrep = await can(user, "clinical-prep:manage");
+  const unreadNotificationCount = await countUnreadNotifications(user);
 
   return (
     <AppShell
       user={user}
       canManagePlacements={canManagePlacements}
       canManageClinicalPrep={canManageClinicalPrep}
+      unreadNotificationCount={unreadNotificationCount}
     >
       {children}
     </AppShell>
