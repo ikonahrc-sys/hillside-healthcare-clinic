@@ -8,11 +8,13 @@ export function ReferralsTab({
   referrals,
   canManageReferrals,
   canManageRehab,
+  canManageHomeNursing,
 }: {
   patientId: string;
   referrals: Referral[];
   canManageReferrals: boolean;
   canManageRehab: boolean;
+  canManageHomeNursing: boolean;
 }) {
   return (
     <div className="rounded border border-slate-200 bg-white p-4">
@@ -36,6 +38,10 @@ export function ReferralsTab({
               canManageRehab &&
               r.status === "ACCEPTED" &&
               r.toDepartment.code === "REHAB";
+            const showHomeNursingAssessmentLink =
+              canManageHomeNursing &&
+              r.status === "ACCEPTED" &&
+              r.toDepartment.code === "HN";
 
             return (
               <li
@@ -57,6 +63,14 @@ export function ReferralsTab({
                 {showRehabAssessmentLink && (
                   <Link
                     href={`/patients/${patientId}/rehab-assessments/new?referralId=${r.id}`}
+                    className="mt-2 inline-block rounded border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700"
+                  >
+                    New Assessment from this referral
+                  </Link>
+                )}
+                {showHomeNursingAssessmentLink && (
+                  <Link
+                    href={`/patients/${patientId}/home-nursing-assessments/new?referralId=${r.id}`}
                     className="mt-2 inline-block rounded border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700"
                   >
                     New Assessment from this referral

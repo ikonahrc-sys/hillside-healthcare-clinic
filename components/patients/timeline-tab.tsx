@@ -7,6 +7,7 @@ const TYPE_STYLES: Record<TimelineEntry["type"], string> = {
   appointment: "bg-sky-100 text-sky-800",
   rehab: "bg-purple-100 text-purple-800",
   therapySession: "bg-violet-100 text-violet-800",
+  homeNursing: "bg-rose-100 text-rose-800",
 };
 
 export function TimelineTab({ entries }: { entries: TimelineEntry[] }) {

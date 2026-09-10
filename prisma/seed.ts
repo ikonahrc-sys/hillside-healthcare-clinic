@@ -14,6 +14,7 @@ const PERMISSIONS = [
   { key: "appointment:manage", description: "Schedule and view scheduled appointments" },
   { key: "inventory:manage", description: "View stock and receive new medicine batches" },
   { key: "rehab:manage", description: "Create rehabilitation assessments and treatment plans" },
+  { key: "homenursing:manage", description: "Create home nursing assessments and care plans" },
   { key: "user:manage", description: "Create/edit user accounts and roles" },
   { key: "placement:manage", description: "Manage student clinical placements" },
 ] as const;
@@ -37,6 +38,7 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   PHYSIOTHERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
   SPEECH_THERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
   OCCUPATIONAL_THERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
+  HOME_NURSING_STAFF: ["patient:read", "referral:manage", "homenursing:manage", "appointment:manage"],
 };
 
 // Dev-only test accounts, one per role, so every phase can be tested as the
@@ -47,6 +49,7 @@ const TEST_USERS = [
   { email: "physio@hillside.local", fullName: "Lisa Chen", roleName: "PHYSIOTHERAPIST" },
   { email: "speech@hillside.local", fullName: "Marcus Reyes", roleName: "SPEECH_THERAPIST" },
   { email: "ot@hillside.local", fullName: "Priya Nair", roleName: "OCCUPATIONAL_THERAPIST" },
+  { email: "nurse@hillside.local", fullName: "Grace Obi", roleName: "HOME_NURSING_STAFF" },
 ] as const;
 
 const DEPARTMENTS = [
@@ -54,6 +57,7 @@ const DEPARTMENTS = [
   { name: "Medical", code: "MED" },
   { name: "Pharmacy", code: "PHARM" },
   { name: "Rehabilitation", code: "REHAB" },
+  { name: "Home Nursing", code: "HN" },
 ] as const;
 
 // A small starter catalog so prescribing is actually testable. No
@@ -134,6 +138,7 @@ async function main() {
     PHYSIOTHERAPIST: "REHAB",
     SPEECH_THERAPIST: "REHAB",
     OCCUPATIONAL_THERAPIST: "REHAB",
+    HOME_NURSING_STAFF: "HN",
   };
 
   const testUsers: string[] = [];

@@ -94,6 +94,8 @@ model User {
   rehabAssessments       RehabAssessment[]      @relation("RehabAssessmentTherapist")
   rehabTreatmentPlans    RehabTreatmentPlan[]   @relation("RehabTreatmentPlanTherapist")
   therapySessions        TherapySession[]       @relation("TherapySessionTherapist")
+  homeNursingAssessments HomeNursingAssessment[] @relation("HomeNursingAssessmentNurse")
+  homeNursingCarePlans   HomeNursingCarePlan[]  @relation("HomeNursingCarePlanNurse")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -204,9 +206,11 @@ model Patient {
   referrals           Referral[]
   prescriptions       Prescription[]
   appointments        Appointment[]
-  rehabAssessments    RehabAssessment[]
-  rehabTreatmentPlans RehabTreatmentPlan[]
-  therapySessions     TherapySession[]
+  rehabAssessments       RehabAssessment[]
+  rehabTreatmentPlans    RehabTreatmentPlan[]
+  therapySessions        TherapySession[]
+  homeNursingAssessments HomeNursingAssessment[]
+  homeNursingCarePlans   HomeNursingCarePlan[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -326,7 +330,8 @@ model Referral {
   respondedAt       DateTime?
   responseNotes     String?
 
-  rehabAssessments RehabAssessment[]
+  rehabAssessments       RehabAssessment[]
+  homeNursingAssessments HomeNursingAssessment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -633,4 +638,64 @@ model TherapySession {
   @@index([treatmentPlanId])
   @@index([patientId])
   @@index([therapistId])
+}
+
+// Home Nursing follows the same shape as Rehab: an initial assessment,
+// then a care plan, then (in a later step) logged visits against that
+// plan - a nurse's home visit is not fundamentally different in structure
+// from a therapist's, just different content.
+model HomeNursingAssessment {
+  id String @id @default(cuid())
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  // Optional, same reasoning as RehabAssessment.referralId.
+  referralId String?
+  referral   Referral? @relation(fields: [referralId], references: [id])
+
+  nurseId String
+  nurse   User   @relation("HomeNursingAssessmentNurse", fields: [nurseId], references: [id])
+
+  findings    String
+  careNeeds   String?
+  precautions String?
+  notes       String?
+
+  carePlan HomeNursingCarePlan?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([nurseId])
+}
+
+model HomeNursingCarePlan {
+  id String @id @default(cuid())
+
+  assessmentId String                @unique
+  assessment   HomeNursingAssessment @relation(fields: [assessmentId], references: [id])
+
+  // Denormalized, same reasoning as RehabTreatmentPlan.patientId.
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  nurseId String
+  nurse   User   @relation("HomeNursingCarePlanNurse", fields: [nurseId], references: [id])
+
+  goals       String
+  frequency   String
+  reviewDate  DateTime?
+  precautions String?
+  // Reusing TreatmentPlanStatus - a care plan's lifecycle (active,
+  // completed, discontinued) is identical to a rehab treatment plan's,
+  // no separate enum needed for the same three states.
+  status TreatmentPlanStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([nurseId])
 }

@@ -1,0 +1,124 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth/session";
+import { getHomeNursingAssessment } from "@/lib/services/home-nursing-service";
+import { formatMrn } from "@/lib/services/patient-service";
+import { can } from "@/lib/auth/authorize";
+import { NewCarePlanForm } from "@/components/home-nursing/new-care-plan-form";
+
+export default async function HomeNursingAssessmentPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const user = await getCurrentUser();
+  const assessment = await getHomeNursingAssessment(user, id);
+
+  if (!assessment) {
+    notFound();
+  }
+
+  const canManage = user ? await can(user, "homenursing:manage") : false;
+
+  return (
+    <div>
+      <div className="mb-4">
+        <Link
+          href={`/patients/${assessment.patient.id}?tab=home-nursing`}
+          className="text-sm text-slate-500 hover:underline"
+        >
+          &larr; Back to patient
+        </Link>
+        <h1 className="mt-1 text-lg font-semibold text-slate-900">
+          Home Nursing Assessment
+        </h1>
+        <p className="text-sm text-slate-500">
+          {assessment.patient.lastName}, {assessment.patient.firstName} (
+          {formatMrn(assessment.patient.mrnNumber)}) - by{" "}
+          {assessment.nurse.fullName} - {assessment.createdAt.toDateString()}
+        </p>
+      </div>
+
+      <div className="rounded border border-slate-200 bg-white p-4">
+        <h2 className="mb-2 text-sm font-semibold text-slate-700">Findings</h2>
+        <p className="mb-3 text-sm text-slate-700">{assessment.findings}</p>
+
+        {assessment.careNeeds && (
+          <>
+            <h2 className="mb-1 text-sm font-semibold text-slate-700">
+              Care needs
+            </h2>
+            <p className="mb-3 text-sm text-slate-700">{assessment.careNeeds}</p>
+          </>
+        )}
+
+        {assessment.precautions && (
+          <>
+            <h2 className="mb-1 text-sm font-semibold text-slate-700">
+              Precautions
+            </h2>
+            <p className="mb-3 text-sm text-slate-700">{assessment.precautions}</p>
+          </>
+        )}
+
+        {assessment.notes && (
+          <>
+            <h2 className="mb-1 text-sm font-semibold text-slate-700">Notes</h2>
+            <p className="text-sm text-slate-700">{assessment.notes}</p>
+          </>
+        )}
+      </div>
+
+      <div className="mt-6 rounded border border-slate-200 bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold text-slate-700">
+          Care Plan
+        </h2>
+
+        {assessment.carePlan ? (
+          <dl className="flex flex-col gap-2 text-sm">
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Goals
+              </dt>
+              <dd className="text-slate-700">{assessment.carePlan.goals}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Frequency
+              </dt>
+              <dd className="text-slate-700">{assessment.carePlan.frequency}</dd>
+            </div>
+            {assessment.carePlan.reviewDate && (
+              <div>
+                <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Review date
+                </dt>
+                <dd className="text-slate-700">
+                  {assessment.carePlan.reviewDate.toDateString()}
+                </dd>
+              </div>
+            )}
+            {assessment.carePlan.precautions && (
+              <div>
+                <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Precautions
+                </dt>
+                <dd className="text-slate-700">
+                  {assessment.carePlan.precautions}
+                </dd>
+              </div>
+            )}
+            <span className="w-fit rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+              {assessment.carePlan.status}
+            </span>
+          </dl>
+        ) : canManage ? (
+          <NewCarePlanForm assessmentId={assessment.id} />
+        ) : (
+          <p className="text-sm text-slate-500">No care plan yet.</p>
+        )}
+      </div>
+    </div>
+  );
+}

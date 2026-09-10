@@ -6,6 +6,7 @@ import type {
   listRehabAssessmentsForPatient,
   listTherapySessionsForPatient,
 } from "@/lib/services/rehab-service";
+import type { listHomeNursingAssessmentsForPatient } from "@/lib/services/home-nursing-service";
 
 type Consultation = Awaited<ReturnType<typeof listConsultationsForPatient>>[number];
 type Prescription = Awaited<ReturnType<typeof listPrescriptionsForPatient>>[number];
@@ -13,11 +14,19 @@ type Referral = Awaited<ReturnType<typeof listReferralsForPatient>>[number];
 type Appointment = Awaited<ReturnType<typeof listAppointmentsForPatient>>[number];
 type RehabAssessment = Awaited<ReturnType<typeof listRehabAssessmentsForPatient>>[number];
 type TherapySession = Awaited<ReturnType<typeof listTherapySessionsForPatient>>[number];
+type HomeNursingAssessment = Awaited<ReturnType<typeof listHomeNursingAssessmentsForPatient>>[number];
 
 const DISCIPLINE_LABELS: Record<string, string> = {
   PHYSIOTHERAPY: "Physiotherapy",
   SPEECH_THERAPY: "Speech Therapy",
   OCCUPATIONAL_THERAPY: "Occupational Therapy",
+};
+
+const APPOINTMENT_TYPE_LABELS: Record<string, string> = {
+  MEDICAL_FOLLOW_UP: "Medical follow-up",
+  PHYSIOTHERAPY: "Physiotherapy session",
+  SPEECH_THERAPY: "Speech therapy session",
+  OCCUPATIONAL_THERAPY: "Occupational therapy session",
 };
 
 export type TimelineEntry = {
@@ -29,7 +38,8 @@ export type TimelineEntry = {
     | "referral"
     | "appointment"
     | "rehab"
-    | "therapySession";
+    | "therapySession"
+    | "homeNursing";
   title: string;
   subtitle: string;
   isUpcoming: boolean;
@@ -42,6 +52,7 @@ export function buildPatientTimeline(data: {
   appointments: Appointment[];
   rehabAssessments: RehabAssessment[];
   therapySessions: TherapySession[];
+  homeNursingAssessments: HomeNursingAssessment[];
 }): TimelineEntry[] {
   const now = new Date();
   const entries: TimelineEntry[] = [];
@@ -84,7 +95,7 @@ export function buildPatientTimeline(data: {
       id: a.id,
       date: a.scheduledAt,
       type: "appointment",
-      title: "Medical follow-up",
+      title: APPOINTMENT_TYPE_LABELS[a.type] ?? a.type,
       subtitle: `Appointment (${a.status}) - ${a.staff.fullName}`,
       isUpcoming: a.scheduledAt > now,
     });
@@ -108,6 +119,17 @@ export function buildPatientTimeline(data: {
       type: "therapySession",
       title: "Therapy session",
       subtitle: `Rehabilitation - ${s.therapist.fullName}`,
+      isUpcoming: false,
+    });
+  }
+
+  for (const hn of data.homeNursingAssessments) {
+    entries.push({
+      id: hn.id,
+      date: hn.createdAt,
+      type: "homeNursing",
+      title: "Home nursing assessment",
+      subtitle: `Home Nursing - ${hn.nurse.fullName}${hn.carePlan ? " (plan active)" : ""}`,
       isUpcoming: false,
     });
   }

@@ -9,6 +9,7 @@ import {
   listRehabAssessmentsForPatient,
   listTherapySessionsForPatient,
 } from "@/lib/services/rehab-service";
+import { listHomeNursingAssessmentsForPatient } from "@/lib/services/home-nursing-service";
 import { can } from "@/lib/auth/authorize";
 import { calculateAge } from "@/lib/utils/age";
 import { buildPatientTimeline } from "@/lib/utils/timeline";
@@ -19,6 +20,7 @@ import { ConsultationsTab } from "@/components/patients/consultations-tab";
 import { PrescriptionsTab } from "@/components/patients/prescriptions-tab";
 import { ReferralsTab } from "@/components/patients/referrals-tab";
 import { RehabilitationTab } from "@/components/patients/rehabilitation-tab";
+import { HomeNursingTab } from "@/components/patients/home-nursing-tab";
 
 const VALID_TABS = [
   "overview",
@@ -27,6 +29,7 @@ const VALID_TABS = [
   "prescriptions",
   "referrals",
   "rehabilitation",
+  "home-nursing",
 ];
 
 export default async function PatientDetailPage({
@@ -54,11 +57,13 @@ export default async function PatientDetailPage({
     appointments,
     rehabAssessments,
     therapySessions,
+    homeNursingAssessments,
     canCreateConsultation,
     canManageReferrals,
     canCreatePrescription,
     canManageAppointments,
     canManageRehab,
+    canManageHomeNursing,
   ] = await Promise.all([
     listConsultationsForPatient(user, patient.id),
     listReferralsForPatient(user, patient.id),
@@ -66,11 +71,13 @@ export default async function PatientDetailPage({
     listAppointmentsForPatient(user, patient.id),
     listRehabAssessmentsForPatient(user, patient.id),
     listTherapySessionsForPatient(user, patient.id),
+    listHomeNursingAssessmentsForPatient(user, patient.id),
     user ? can(user, "consultation:create") : Promise.resolve(false),
     user ? can(user, "referral:manage") : Promise.resolve(false),
     user ? can(user, "prescription:create") : Promise.resolve(false),
     user ? can(user, "appointment:manage") : Promise.resolve(false),
     user ? can(user, "rehab:manage") : Promise.resolve(false),
+    user ? can(user, "homenursing:manage") : Promise.resolve(false),
   ]);
 
   const timelineEntries = buildPatientTimeline({
@@ -80,6 +87,7 @@ export default async function PatientDetailPage({
     appointments,
     rehabAssessments,
     therapySessions,
+    homeNursingAssessments,
   });
 
   return (
@@ -119,6 +127,7 @@ export default async function PatientDetailPage({
           referrals={referrals}
           canManageReferrals={canManageReferrals}
           canManageRehab={canManageRehab}
+          canManageHomeNursing={canManageHomeNursing}
         />
       )}
       {activeTab === "rehabilitation" && (
@@ -127,6 +136,13 @@ export default async function PatientDetailPage({
           assessments={rehabAssessments}
           canManage={canManageRehab}
           canScheduleAppointments={canManageAppointments}
+        />
+      )}
+      {activeTab === "home-nursing" && (
+        <HomeNursingTab
+          patientId={patient.id}
+          assessments={homeNursingAssessments}
+          canManage={canManageHomeNursing}
         />
       )}
     </div>
