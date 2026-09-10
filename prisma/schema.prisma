@@ -79,12 +79,23 @@ model User {
 
   placementsAsStudent    ClinicalPlacement[] @relation("StudentPlacements")
   placementsAsSupervisor ClinicalPlacement[] @relation("SupervisorPlacements")
+  sessions               Session[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([roleId])
   @@index([departmentId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 enum PlacementStatus {
