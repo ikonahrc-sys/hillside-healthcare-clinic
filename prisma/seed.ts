@@ -56,6 +56,7 @@ const TEST_USERS = [
   { email: "ot@hillside.local", fullName: "Priya Nair", roleName: "OCCUPATIONAL_THERAPIST" },
   { email: "nurse@hillside.local", fullName: "Grace Obi", roleName: "HOME_NURSING_STAFF" },
   { email: "student@hillside.local", fullName: "Alex Torres", roleName: "STUDENT" },
+  { email: "student2@hillside.local", fullName: "Jordan Reyes", roleName: "STUDENT" },
 ] as const;
 
 const DEPARTMENTS = [
@@ -170,13 +171,32 @@ async function main() {
     usersByEmail.set(user.email, user);
   }
 
-  // A seeded ACTIVE placement so the student test account can actually log
+  // Seeded ACTIVE placements so each student test account can actually log
   // in (getCurrentUser rejects a STUDENT with no active placement) and so
-  // Phase 6's department-scoped patient list has something real to show.
-  const studentUser = usersByEmail.get("student@hillside.local");
-  const supervisorUser = usersByEmail.get("physio@hillside.local");
-  const rehabDept = departmentsByCode.get("REHAB");
-  if (studentUser && rehabDept) {
+  // Phase 6's department-scoped patient list and student co-authorship
+  // flows have something real to test against in every department that
+  // has co-sign wired up so far.
+  const SEED_PLACEMENTS = [
+    {
+      studentEmail: "student@hillside.local",
+      supervisorEmail: "physio@hillside.local",
+      departmentCode: "REHAB",
+      clinicalArea: "Physiotherapy - Orthopedic Rotation",
+    },
+    {
+      studentEmail: "student2@hillside.local",
+      supervisorEmail: "nurse@hillside.local",
+      departmentCode: "HN",
+      clinicalArea: "Home Nursing - Chronic Disease Management Rotation",
+    },
+  ] as const;
+
+  for (const placement of SEED_PLACEMENTS) {
+    const studentUser = usersByEmail.get(placement.studentEmail);
+    const supervisorUser = usersByEmail.get(placement.supervisorEmail);
+    const dept = departmentsByCode.get(placement.departmentCode);
+    if (!studentUser || !dept) continue;
+
     const now = new Date();
     const startDate = new Date(now);
     startDate.setDate(startDate.getDate() - 7);
@@ -184,18 +204,18 @@ async function main() {
     endDate.setDate(endDate.getDate() + 21);
 
     const existingPlacement = await prisma.clinicalPlacement.findFirst({
-      where: { studentId: studentUser.id, departmentId: rehabDept.id },
+      where: { studentId: studentUser.id, departmentId: dept.id },
     });
     if (!existingPlacement) {
       await prisma.clinicalPlacement.create({
         data: {
           studentId: studentUser.id,
-          departmentId: rehabDept.id,
+          departmentId: dept.id,
           supervisorId: supervisorUser?.id,
           startDate,
           endDate,
           status: "ACTIVE",
-          clinicalArea: "Physiotherapy - Orthopedic Rotation",
+          clinicalArea: placement.clinicalArea,
         },
       });
     }

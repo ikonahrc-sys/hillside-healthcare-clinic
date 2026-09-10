@@ -133,23 +133,25 @@ export function buildPatientTimeline(data: {
   }
 
   for (const hn of data.homeNursingAssessments) {
+    const pendingCoSign = hn.nurse.role.name === "STUDENT" && !hn.coSignedAt;
     entries.push({
       id: hn.id,
       date: hn.createdAt,
       type: "homeNursing",
       title: "Home nursing assessment",
-      subtitle: `Home Nursing - ${hn.nurse.fullName}${hn.carePlan ? " (plan active)" : ""}`,
+      subtitle: `Home Nursing - ${hn.nurse.fullName}${pendingCoSign ? " (pending co-sign)" : hn.carePlan ? " (plan active)" : ""}`,
       isUpcoming: false,
     });
   }
 
   for (const v of data.homeVisits) {
+    const pendingCoSign = v.nurse.role.name === "STUDENT" && !v.coSignedAt;
     entries.push({
       id: v.id,
       date: v.visitDate,
       type: "homeVisit",
       title: "Home visit",
-      subtitle: `Home Nursing - ${v.nurse.fullName}`,
+      subtitle: `Home Nursing - ${v.nurse.fullName}${pendingCoSign ? " (pending co-sign)" : ""}`,
       isUpcoming: false,
     });
   }

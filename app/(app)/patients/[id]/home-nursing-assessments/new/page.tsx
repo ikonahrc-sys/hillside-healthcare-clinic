@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getPatientById, formatMrn } from "@/lib/services/patient-service";
-import { can } from "@/lib/auth/authorize";
+import { canAuthorClinicalRecord } from "@/lib/auth/clinical-author";
 import { NewAssessmentForm } from "@/components/home-nursing/new-assessment-form";
 
 export default async function NewHomeNursingAssessmentPage({
@@ -20,7 +20,7 @@ export default async function NewHomeNursingAssessmentPage({
     notFound();
   }
 
-  if (!user || !(await can(user, "homenursing:manage"))) {
+  if (!(await canAuthorClinicalRecord(user, "homenursing:manage", "HN"))) {
     redirect(`/patients/${patient.id}`);
   }
 

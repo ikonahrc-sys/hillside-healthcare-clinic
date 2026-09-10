@@ -98,8 +98,11 @@ model User {
   therapySessions        TherapySession[]       @relation("TherapySessionTherapist")
   therapySessionsCoSigned TherapySession[]      @relation("TherapySessionCoSigner")
   homeNursingAssessments HomeNursingAssessment[] @relation("HomeNursingAssessmentNurse")
+  homeNursingAssessmentsCoSigned HomeNursingAssessment[] @relation("HomeNursingAssessmentCoSigner")
   homeNursingCarePlans   HomeNursingCarePlan[]  @relation("HomeNursingCarePlanNurse")
+  homeNursingCarePlansCoSigned HomeNursingCarePlan[] @relation("HomeNursingCarePlanCoSigner")
   homeVisits             HomeVisit[]            @relation("HomeVisitNurse")
+  homeVisitsCoSigned     HomeVisit[]            @relation("HomeVisitCoSigner")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -682,6 +685,12 @@ model HomeNursingAssessment {
   nurseId String
   nurse   User   @relation("HomeNursingAssessmentNurse", fields: [nurseId], references: [id])
 
+  // Same co-sign shape as RehabAssessment.coSignedByUserId/coSignedAt -
+  // see the comment there.
+  coSignedByUserId String?
+  coSignedBy       User?     @relation("HomeNursingAssessmentCoSigner", fields: [coSignedByUserId], references: [id])
+  coSignedAt       DateTime?
+
   findings    String
   careNeeds   String?
   precautions String?
@@ -708,6 +717,12 @@ model HomeNursingCarePlan {
 
   nurseId String
   nurse   User   @relation("HomeNursingCarePlanNurse", fields: [nurseId], references: [id])
+
+  // Same co-sign shape as RehabAssessment.coSignedByUserId/coSignedAt -
+  // see the comment there.
+  coSignedByUserId String?
+  coSignedBy       User?     @relation("HomeNursingCarePlanCoSigner", fields: [coSignedByUserId], references: [id])
+  coSignedAt       DateTime?
 
   goals       String
   frequency   String
@@ -742,6 +757,12 @@ model HomeVisit {
 
   nurseId String
   nurse   User   @relation("HomeVisitNurse", fields: [nurseId], references: [id])
+
+  // Same co-sign shape as RehabAssessment.coSignedByUserId/coSignedAt -
+  // see the comment there.
+  coSignedByUserId String?
+  coSignedBy       User?     @relation("HomeVisitCoSigner", fields: [coSignedByUserId], references: [id])
+  coSignedAt       DateTime?
 
   visitDate DateTime @default(now())
 
