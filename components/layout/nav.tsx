@@ -27,8 +27,8 @@ export function Nav({
   // "Placements" is inserted next to "Users & Roles" rather than added to
   // the static list unconditionally - it's real and permission-gated, the
   // rest are still placeholders for later phases. "Clinical Preparation"
-  // is already in the static list as a placeholder, so it just needs its
-  // href filled in once the feature exists.
+  // and "Reports" are already in the static list as placeholders, so they
+  // just need their href filled in once each feature exists.
   let items: NavItem[] = canManagePlacements
     ? [
         ...BASE_NAV_ITEMS.slice(0, -2),
@@ -42,6 +42,14 @@ export function Nav({
       item.label === "Clinical Preparation"
         ? { ...item, href: "/clinical-preparation" }
         : item,
+    );
+  }
+
+  // The Pending Co-Signs report is gated by the same permission as
+  // Placements - it's the same admin/coordinator oversight audience.
+  if (canManagePlacements) {
+    items = items.map((item) =>
+      item.label === "Reports" ? { ...item, href: "/reports" } : item,
     );
   }
 
