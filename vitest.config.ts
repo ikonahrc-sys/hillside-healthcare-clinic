@@ -3,11 +3,11 @@ import path from "node:path";
 
 export default defineConfig({
   test: {
-    // lib/db.ts constructs the Postgres adapter at import time (reading
-    // process.env.DATABASE_URL) even though the tests here never run a
-    // query - without this, importing any module that transitively
-    // imports lib/db.ts fails before a single test runs.
-    setupFiles: ["dotenv/config"],
+    // Loads .env.test (a dedicated hillside_hms_test database, not the dev
+    // DB) before any test file runs - lib/db.ts constructs the Postgres
+    // adapter at import time by reading process.env.DATABASE_URL, so this
+    // has to happen even for tests that never run a query.
+    setupFiles: ["./vitest.setup.env.ts"],
   },
   resolve: {
     alias: {
