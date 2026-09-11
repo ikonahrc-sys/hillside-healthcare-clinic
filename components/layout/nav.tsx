@@ -5,11 +5,7 @@ type NavItem = { label: string; href?: string };
 const BASE_NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Patients", href: "/patients" },
-  { label: "Medical" },
   { label: "Pharmacy", href: "/pharmacy" },
-  { label: "Rehabilitation" },
-  { label: "Home Nursing" },
-  { label: "Appointments" },
   { label: "Clinical Preparation" },
   { label: "Referrals", href: "/referrals" },
   { label: "Reports" },
