@@ -5,6 +5,7 @@ import { getHomeNursingAssessment } from "@/lib/services/home-nursing-service";
 import { formatMrn } from "@/lib/services/patient-service";
 import { can } from "@/lib/auth/authorize";
 import { canAuthorClinicalRecord } from "@/lib/auth/clinical-author";
+import { listComments } from "@/lib/services/record-comment-service";
 import {
   coSignHomeNursingAssessmentAction,
   coSignHomeNursingCarePlanAction,
@@ -12,6 +13,10 @@ import {
 } from "@/lib/actions/home-nursing";
 import { NewCarePlanForm } from "@/components/home-nursing/new-care-plan-form";
 import { LogHomeVisitForm } from "@/components/home-nursing/log-home-visit-form";
+import { EditAssessmentForm } from "@/components/home-nursing/edit-assessment-form";
+import { EditCarePlanForm } from "@/components/home-nursing/edit-care-plan-form";
+import { EditHomeVisitForm } from "@/components/home-nursing/edit-home-visit-form";
+import { CommentThread } from "@/components/shared/comment-thread";
 
 export default async function HomeNursingAssessmentPage({
   params,
@@ -35,6 +40,39 @@ export default async function HomeNursingAssessmentPage({
     assessment.carePlan.nurse.role.name === "STUDENT" &&
     !assessment.carePlan.coSignedAt;
 
+  const isAssessmentAuthor = user?.id === assessment.nurseId;
+  const canSeeAssessmentThread = isPendingCoSign && (canManage || isAssessmentAuthor);
+  const assessmentComments = canSeeAssessmentThread
+    ? (await listComments(user, "HomeNursingAssessment", assessment.id)).map((c) => ({
+        ...c,
+        createdAt: c.createdAt.toLocaleString(),
+      }))
+    : [];
+
+  const isPlanAuthor = user?.id === assessment.carePlan?.nurseId;
+  const canSeePlanThread = Boolean(isPlanPendingCoSign) && (canManage || isPlanAuthor);
+  const planComments =
+    canSeePlanThread && assessment.carePlan
+      ? (await listComments(user, "HomeNursingCarePlan", assessment.carePlan.id)).map((c) => ({
+          ...c,
+          createdAt: c.createdAt.toLocaleString(),
+        }))
+      : [];
+
+  const visitExtras = new Map<
+    string,
+    { isAuthor: boolean; canSeeThread: boolean; comments: Awaited<ReturnType<typeof listComments>> }
+  >();
+  if (assessment.carePlan) {
+    for (const v of assessment.carePlan.homeVisits) {
+      const visitPendingCoSign = v.nurse.role.name === "STUDENT" && !v.coSignedAt;
+      const isAuthor = user?.id === v.nurseId;
+      const canSeeThread = visitPendingCoSign && (canManage || isAuthor);
+      const comments = canSeeThread ? await listComments(user, "HomeVisit", v.id) : [];
+      visitExtras.set(v.id, { isAuthor, canSeeThread, comments });
+    }
+  }
+
   return (
     <div>
       <div className="mb-4">
@@ -55,21 +93,42 @@ export default async function HomeNursingAssessmentPage({
       </div>
 
       {isPendingCoSign && (
-        <div className="mb-4 flex items-center justify-between rounded border border-red-200 bg-red-50 p-3">
-          <p className="text-sm text-red-800">
-            Student-authored - pending supervisor co-sign before this is part
-            of the official record.
-          </p>
-          {canManage && (
-            <form action={coSignHomeNursingAssessmentAction}>
-              <input type="hidden" name="assessmentId" value={assessment.id} />
-              <button
-                type="submit"
-                className="rounded bg-red-700 px-3 py-1.5 text-xs font-medium text-white"
-              >
-                Co-sign
-              </button>
-            </form>
+        <div className="mb-4 rounded border border-red-200 bg-red-50 p-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-red-800">
+              Student-authored - pending supervisor co-sign before this is part
+              of the official record.
+            </p>
+            {canManage && (
+              <form action={coSignHomeNursingAssessmentAction}>
+                <input type="hidden" name="assessmentId" value={assessment.id} />
+                <button
+                  type="submit"
+                  className="rounded bg-red-700 px-3 py-1.5 text-xs font-medium text-white"
+                >
+                  Co-sign
+                </button>
+              </form>
+            )}
+          </div>
+          {canSeeAssessmentThread && (
+            <CommentThread
+              entityType="HomeNursingAssessment"
+              entityId={assessment.id}
+              revalidatePathTarget={`/home-nursing-assessments/${assessment.id}`}
+              comments={assessmentComments}
+            />
+          )}
+          {isAssessmentAuthor && (
+            <EditAssessmentForm
+              assessmentId={assessment.id}
+              initial={{
+                findings: assessment.findings,
+                careNeeds: assessment.careNeeds,
+                precautions: assessment.precautions,
+                notes: assessment.notes,
+              }}
+            />
           )}
         </div>
       )}
@@ -117,25 +176,49 @@ export default async function HomeNursingAssessmentPage({
         </h2>
 
         {isPlanPendingCoSign && (
-          <div className="mb-3 flex items-center justify-between rounded border border-red-200 bg-red-50 p-3">
-            <p className="text-sm text-red-800">
-              Student-authored - pending supervisor co-sign.
-            </p>
-            {canManage && (
-              <form action={coSignHomeNursingCarePlanAction}>
-                <input type="hidden" name="assessmentId" value={assessment.id} />
-                <input
-                  type="hidden"
-                  name="carePlanId"
-                  value={assessment.carePlan!.id}
-                />
-                <button
-                  type="submit"
-                  className="rounded bg-red-700 px-3 py-1.5 text-xs font-medium text-white"
-                >
-                  Co-sign
-                </button>
-              </form>
+          <div className="mb-3 rounded border border-red-200 bg-red-50 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-red-800">
+                Student-authored - pending supervisor co-sign.
+              </p>
+              {canManage && (
+                <form action={coSignHomeNursingCarePlanAction}>
+                  <input type="hidden" name="assessmentId" value={assessment.id} />
+                  <input
+                    type="hidden"
+                    name="carePlanId"
+                    value={assessment.carePlan!.id}
+                  />
+                  <button
+                    type="submit"
+                    className="rounded bg-red-700 px-3 py-1.5 text-xs font-medium text-white"
+                  >
+                    Co-sign
+                  </button>
+                </form>
+              )}
+            </div>
+            {canSeePlanThread && (
+              <CommentThread
+                entityType="HomeNursingCarePlan"
+                entityId={assessment.carePlan!.id}
+                revalidatePathTarget={`/home-nursing-assessments/${assessment.id}`}
+                comments={planComments}
+              />
+            )}
+            {isPlanAuthor && (
+              <EditCarePlanForm
+                assessmentId={assessment.id}
+                carePlanId={assessment.carePlan!.id}
+                initial={{
+                  goals: assessment.carePlan!.goals,
+                  frequency: assessment.carePlan!.frequency,
+                  reviewDate: assessment.carePlan!.reviewDate
+                    ? assessment.carePlan!.reviewDate.toISOString().slice(0, 10)
+                    : null,
+                  precautions: assessment.carePlan!.precautions,
+                }}
+              />
             )}
           </div>
         )}
@@ -202,6 +285,7 @@ export default async function HomeNursingAssessmentPage({
               {assessment.carePlan.homeVisits.map((v) => {
                 const visitPendingCoSign =
                   v.nurse.role.name === "STUDENT" && !v.coSignedAt;
+                const extra = visitExtras.get(v.id)!;
                 return (
                   <li
                     key={v.id}
@@ -222,21 +306,45 @@ export default async function HomeNursingAssessmentPage({
                       <p className="mt-1 text-sm text-slate-500">{v.notes}</p>
                     )}
                     {visitPendingCoSign && (
-                      <div className="mt-2 flex items-center justify-between rounded border border-red-200 bg-red-50 p-2">
-                        <span className="text-xs text-red-800">
-                          Student-authored - pending co-sign
-                        </span>
-                        {canManage && (
-                          <form action={coSignHomeVisitAction}>
-                            <input type="hidden" name="assessmentId" value={assessment.id} />
-                            <input type="hidden" name="visitId" value={v.id} />
-                            <button
-                              type="submit"
-                              className="rounded bg-red-700 px-2 py-1 text-xs font-medium text-white"
-                            >
-                              Co-sign
-                            </button>
-                          </form>
+                      <div className="mt-2 rounded border border-red-200 bg-red-50 p-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-red-800">
+                            Student-authored - pending co-sign
+                          </span>
+                          {canManage && (
+                            <form action={coSignHomeVisitAction}>
+                              <input type="hidden" name="assessmentId" value={assessment.id} />
+                              <input type="hidden" name="visitId" value={v.id} />
+                              <button
+                                type="submit"
+                                className="rounded bg-red-700 px-2 py-1 text-xs font-medium text-white"
+                              >
+                                Co-sign
+                              </button>
+                            </form>
+                          )}
+                        </div>
+                        {extra.canSeeThread && (
+                          <CommentThread
+                            entityType="HomeVisit"
+                            entityId={v.id}
+                            revalidatePathTarget={`/home-nursing-assessments/${assessment.id}`}
+                            comments={extra.comments.map((c) => ({
+                              ...c,
+                              createdAt: c.createdAt.toLocaleString(),
+                            }))}
+                          />
+                        )}
+                        {extra.isAuthor && (
+                          <EditHomeVisitForm
+                            assessmentId={assessment.id}
+                            visitId={v.id}
+                            initial={{
+                              careProvided: v.careProvided,
+                              patientCondition: v.patientCondition,
+                              notes: v.notes,
+                            }}
+                          />
                         )}
                       </div>
                     )}

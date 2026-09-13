@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
-import { authorize } from "@/lib/auth/authorize";
+import { authorize, requireAuthenticated, AuthorizationError } from "@/lib/auth/authorize";
 import { authorizeClinicalAuthor } from "@/lib/auth/clinical-author";
 import { logAudit } from "@/lib/audit/log";
 import type { CurrentUser } from "@/lib/auth/session";
@@ -100,6 +100,47 @@ export async function createHomeNursingAssessment(
   return assessment;
 }
 
+export async function updateHomeNursingAssessment(
+  user: CurrentUser | null,
+  assessmentId: string,
+  input: HomeNursingAssessmentInput,
+) {
+  const authedUser = requireAuthenticated(user);
+
+  const assessment = await prisma.homeNursingAssessment.findUnique({
+    where: { id: assessmentId },
+  });
+  if (!assessment) {
+    throw new Error("Assessment not found");
+  }
+  if (assessment.nurseId !== authedUser.id) {
+    throw new AuthorizationError("Only the original author can edit this record.");
+  }
+  if (assessment.coSignedAt) {
+    throw new Error("This assessment has already been co-signed and can no longer be edited.");
+  }
+
+  const updated = await prisma.homeNursingAssessment.update({
+    where: { id: assessmentId },
+    data: {
+      findings: input.findings,
+      careNeeds: input.careNeeds,
+      precautions: input.precautions,
+      notes: input.notes,
+    },
+  });
+
+  await logAudit({
+    actorId: authedUser.id,
+    actorEmail: authedUser.email,
+    action: "HOME_NURSING_ASSESSMENT_UPDATE",
+    entityType: "HomeNursingAssessment",
+    entityId: assessment.id,
+  });
+
+  return updated;
+}
+
 export async function coSignHomeNursingAssessment(
   user: CurrentUser | null,
   assessmentId: string,
@@ -186,6 +227,47 @@ export async function createHomeNursingCarePlan(
   return plan;
 }
 
+export async function updateHomeNursingCarePlan(
+  user: CurrentUser | null,
+  carePlanId: string,
+  input: HomeNursingCarePlanInput,
+) {
+  const authedUser = requireAuthenticated(user);
+
+  const plan = await prisma.homeNursingCarePlan.findUnique({
+    where: { id: carePlanId },
+  });
+  if (!plan) {
+    throw new Error("Care plan not found");
+  }
+  if (plan.nurseId !== authedUser.id) {
+    throw new AuthorizationError("Only the original author can edit this record.");
+  }
+  if (plan.coSignedAt) {
+    throw new Error("This care plan has already been co-signed and can no longer be edited.");
+  }
+
+  const updated = await prisma.homeNursingCarePlan.update({
+    where: { id: carePlanId },
+    data: {
+      goals: input.goals,
+      frequency: input.frequency,
+      reviewDate: input.reviewDate,
+      precautions: input.precautions,
+    },
+  });
+
+  await logAudit({
+    actorId: authedUser.id,
+    actorEmail: authedUser.email,
+    action: "HOME_NURSING_CARE_PLAN_UPDATE",
+    entityType: "HomeNursingCarePlan",
+    entityId: plan.id,
+  });
+
+  return updated;
+}
+
 export async function coSignHomeNursingCarePlan(
   user: CurrentUser | null,
   carePlanId: string,
@@ -262,6 +344,44 @@ export async function logHomeVisit(
   });
 
   return visit;
+}
+
+export async function updateHomeVisit(
+  user: CurrentUser | null,
+  visitId: string,
+  input: HomeVisitInput,
+) {
+  const authedUser = requireAuthenticated(user);
+
+  const visit = await prisma.homeVisit.findUnique({ where: { id: visitId } });
+  if (!visit) {
+    throw new Error("Home visit not found");
+  }
+  if (visit.nurseId !== authedUser.id) {
+    throw new AuthorizationError("Only the original author can edit this record.");
+  }
+  if (visit.coSignedAt) {
+    throw new Error("This home visit has already been co-signed and can no longer be edited.");
+  }
+
+  const updated = await prisma.homeVisit.update({
+    where: { id: visitId },
+    data: {
+      careProvided: input.careProvided,
+      patientCondition: input.patientCondition,
+      notes: input.notes,
+    },
+  });
+
+  await logAudit({
+    actorId: authedUser.id,
+    actorEmail: authedUser.email,
+    action: "HOME_VISIT_UPDATE",
+    entityType: "HomeVisit",
+    entityId: visit.id,
+  });
+
+  return updated;
 }
 
 export async function coSignHomeVisit(

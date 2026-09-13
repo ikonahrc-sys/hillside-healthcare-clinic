@@ -14,6 +14,9 @@ import {
   coSignRehabAssessment,
   coSignTreatmentPlan,
   coSignTherapySession,
+  updateRehabAssessment,
+  updateTreatmentPlan,
+  updateTherapySession,
 } from "@/lib/services/rehab-service";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AuthorizationError } from "@/lib/auth/authorize";
@@ -145,6 +148,100 @@ export async function coSignTherapySessionAction(formData: FormData) {
   } finally {
     revalidatePath(`/rehab-assessments/${assessmentId}`);
   }
+}
+
+export async function updateRehabAssessmentAction(
+  assessmentId: string,
+  _prevState: RehabActionState,
+  formData: FormData,
+): Promise<RehabActionState> {
+  const parsed = rehabAssessmentSchema.safeParse({
+    discipline: formData.get("discipline"),
+    findings: formData.get("findings"),
+    functionalLimitations: formData.get("functionalLimitations"),
+    goals: formData.get("goals"),
+    precautions: formData.get("precautions"),
+    notes: formData.get("notes"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const user = await getCurrentUser();
+
+  try {
+    await updateRehabAssessment(user, assessmentId, parsed.data);
+  } catch (e) {
+    if (e instanceof Error) {
+      return { error: e.message };
+    }
+    throw e;
+  }
+
+  redirect(`/rehab-assessments/${assessmentId}`);
+}
+
+export async function updateTreatmentPlanAction(
+  assessmentId: string,
+  treatmentPlanId: string,
+  _prevState: RehabActionState,
+  formData: FormData,
+): Promise<RehabActionState> {
+  const parsed = rehabTreatmentPlanSchema.safeParse({
+    goals: formData.get("goals"),
+    frequency: formData.get("frequency"),
+    reviewDate: formData.get("reviewDate"),
+    precautions: formData.get("precautions"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const user = await getCurrentUser();
+
+  try {
+    await updateTreatmentPlan(user, treatmentPlanId, parsed.data);
+  } catch (e) {
+    if (e instanceof Error) {
+      return { error: e.message };
+    }
+    throw e;
+  }
+
+  redirect(`/rehab-assessments/${assessmentId}`);
+}
+
+export async function updateTherapySessionAction(
+  assessmentId: string,
+  sessionId: string,
+  _prevState: RehabActionState,
+  formData: FormData,
+): Promise<RehabActionState> {
+  const parsed = therapySessionSchema.safeParse({
+    activities: formData.get("activities"),
+    setting: formData.get("setting"),
+    progress: formData.get("progress"),
+    notes: formData.get("notes"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const user = await getCurrentUser();
+
+  try {
+    await updateTherapySession(user, sessionId, parsed.data);
+  } catch (e) {
+    if (e instanceof Error) {
+      return { error: e.message };
+    }
+    throw e;
+  }
+
+  redirect(`/rehab-assessments/${assessmentId}`);
 }
 
 export async function createTreatmentPlanAction(

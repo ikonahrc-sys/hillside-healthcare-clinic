@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
-import { authorize } from "@/lib/auth/authorize";
+import { authorize, requireAuthenticated, AuthorizationError } from "@/lib/auth/authorize";
 import { authorizeClinicalAuthor } from "@/lib/auth/clinical-author";
 import { logAudit } from "@/lib/audit/log";
 import type { CurrentUser } from "@/lib/auth/session";
@@ -102,6 +102,54 @@ export async function createRehabAssessment(
   return assessment;
 }
 
+// Lets the original author revise their own not-yet-co-signed record - a
+// supervisor's comment asking for a correction has nowhere else to lead,
+// since nothing else in this app allows editing after creation. The
+// moment it's co-signed it becomes just as permanently locked as every
+// other official record - this is only ever a pre-signature window.
+export async function updateRehabAssessment(
+  user: CurrentUser | null,
+  assessmentId: string,
+  input: RehabAssessmentInput,
+) {
+  const authedUser = requireAuthenticated(user);
+
+  const assessment = await prisma.rehabAssessment.findUnique({
+    where: { id: assessmentId },
+  });
+  if (!assessment) {
+    throw new Error("Assessment not found");
+  }
+  if (assessment.therapistId !== authedUser.id) {
+    throw new AuthorizationError("Only the original author can edit this record.");
+  }
+  if (assessment.coSignedAt) {
+    throw new Error("This assessment has already been co-signed and can no longer be edited.");
+  }
+
+  const updated = await prisma.rehabAssessment.update({
+    where: { id: assessmentId },
+    data: {
+      discipline: input.discipline,
+      findings: input.findings,
+      functionalLimitations: input.functionalLimitations,
+      goals: input.goals,
+      precautions: input.precautions,
+      notes: input.notes,
+    },
+  });
+
+  await logAudit({
+    actorId: authedUser.id,
+    actorEmail: authedUser.email,
+    action: "REHAB_ASSESSMENT_UPDATE",
+    entityType: "RehabAssessment",
+    entityId: assessment.id,
+  });
+
+  return updated;
+}
+
 export async function coSignRehabAssessment(
   user: CurrentUser | null,
   assessmentId: string,
@@ -188,6 +236,47 @@ export async function createTreatmentPlan(
   return plan;
 }
 
+export async function updateTreatmentPlan(
+  user: CurrentUser | null,
+  treatmentPlanId: string,
+  input: RehabTreatmentPlanInput,
+) {
+  const authedUser = requireAuthenticated(user);
+
+  const plan = await prisma.rehabTreatmentPlan.findUnique({
+    where: { id: treatmentPlanId },
+  });
+  if (!plan) {
+    throw new Error("Treatment plan not found");
+  }
+  if (plan.therapistId !== authedUser.id) {
+    throw new AuthorizationError("Only the original author can edit this record.");
+  }
+  if (plan.coSignedAt) {
+    throw new Error("This treatment plan has already been co-signed and can no longer be edited.");
+  }
+
+  const updated = await prisma.rehabTreatmentPlan.update({
+    where: { id: treatmentPlanId },
+    data: {
+      goals: input.goals,
+      frequency: input.frequency,
+      reviewDate: input.reviewDate,
+      precautions: input.precautions,
+    },
+  });
+
+  await logAudit({
+    actorId: authedUser.id,
+    actorEmail: authedUser.email,
+    action: "REHAB_TREATMENT_PLAN_UPDATE",
+    entityType: "RehabTreatmentPlan",
+    entityId: plan.id,
+  });
+
+  return updated;
+}
+
 export async function coSignTreatmentPlan(
   user: CurrentUser | null,
   treatmentPlanId: string,
@@ -265,6 +354,47 @@ export async function logTherapySession(
   });
 
   return session;
+}
+
+export async function updateTherapySession(
+  user: CurrentUser | null,
+  sessionId: string,
+  input: TherapySessionInput,
+) {
+  const authedUser = requireAuthenticated(user);
+
+  const session = await prisma.therapySession.findUnique({
+    where: { id: sessionId },
+  });
+  if (!session) {
+    throw new Error("Therapy session not found");
+  }
+  if (session.therapistId !== authedUser.id) {
+    throw new AuthorizationError("Only the original author can edit this record.");
+  }
+  if (session.coSignedAt) {
+    throw new Error("This therapy session has already been co-signed and can no longer be edited.");
+  }
+
+  const updated = await prisma.therapySession.update({
+    where: { id: sessionId },
+    data: {
+      activities: input.activities,
+      setting: input.setting,
+      progress: input.progress,
+      notes: input.notes,
+    },
+  });
+
+  await logAudit({
+    actorId: authedUser.id,
+    actorEmail: authedUser.email,
+    action: "THERAPY_SESSION_UPDATE",
+    entityType: "TherapySession",
+    entityId: session.id,
+  });
+
+  return updated;
 }
 
 export async function coSignTherapySession(

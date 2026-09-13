@@ -14,6 +14,9 @@ import {
   coSignHomeNursingAssessment,
   coSignHomeNursingCarePlan,
   coSignHomeVisit,
+  updateHomeNursingAssessment,
+  updateHomeNursingCarePlan,
+  updateHomeVisit,
 } from "@/lib/services/home-nursing-service";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AuthorizationError } from "@/lib/auth/authorize";
@@ -133,6 +136,97 @@ export async function logHomeVisitAction(
     if (e instanceof AuthorizationError) {
       return { error: "You are not authorized to log home visits." };
     }
+    if (e instanceof Error) {
+      return { error: e.message };
+    }
+    throw e;
+  }
+
+  redirect(`/home-nursing-assessments/${assessmentId}`);
+}
+
+export async function updateHomeNursingAssessmentAction(
+  assessmentId: string,
+  _prevState: HomeNursingActionState,
+  formData: FormData,
+): Promise<HomeNursingActionState> {
+  const parsed = homeNursingAssessmentSchema.safeParse({
+    findings: formData.get("findings"),
+    careNeeds: formData.get("careNeeds"),
+    precautions: formData.get("precautions"),
+    notes: formData.get("notes"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const user = await getCurrentUser();
+
+  try {
+    await updateHomeNursingAssessment(user, assessmentId, parsed.data);
+  } catch (e) {
+    if (e instanceof Error) {
+      return { error: e.message };
+    }
+    throw e;
+  }
+
+  redirect(`/home-nursing-assessments/${assessmentId}`);
+}
+
+export async function updateHomeNursingCarePlanAction(
+  assessmentId: string,
+  carePlanId: string,
+  _prevState: HomeNursingActionState,
+  formData: FormData,
+): Promise<HomeNursingActionState> {
+  const parsed = homeNursingCarePlanSchema.safeParse({
+    goals: formData.get("goals"),
+    frequency: formData.get("frequency"),
+    reviewDate: formData.get("reviewDate"),
+    precautions: formData.get("precautions"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const user = await getCurrentUser();
+
+  try {
+    await updateHomeNursingCarePlan(user, carePlanId, parsed.data);
+  } catch (e) {
+    if (e instanceof Error) {
+      return { error: e.message };
+    }
+    throw e;
+  }
+
+  redirect(`/home-nursing-assessments/${assessmentId}`);
+}
+
+export async function updateHomeVisitAction(
+  assessmentId: string,
+  visitId: string,
+  _prevState: HomeNursingActionState,
+  formData: FormData,
+): Promise<HomeNursingActionState> {
+  const parsed = homeVisitSchema.safeParse({
+    careProvided: formData.get("careProvided"),
+    patientCondition: formData.get("patientCondition"),
+    notes: formData.get("notes"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const user = await getCurrentUser();
+
+  try {
+    await updateHomeVisit(user, visitId, parsed.data);
+  } catch (e) {
     if (e instanceof Error) {
       return { error: e.message };
     }

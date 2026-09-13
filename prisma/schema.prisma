@@ -107,6 +107,7 @@ model User {
   notifications          Notification[]
   communityOutreachVisits CommunityOutreachVisit[] @relation("CommunityOutreachStaff")
   surveillanceCasesReported DiseaseSurveillanceCase[] @relation("SurveillanceReporter")
+  recordComments RecordComment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -897,4 +898,30 @@ model DiseaseSurveillanceCase {
   @@index([patientId])
   @@index([reportedByUserId])
   @@index([status])
+}
+
+// A comment thread on any of the six co-signable clinical record types
+// (RehabAssessment, RehabTreatmentPlan, TherapySession,
+// HomeNursingAssessment, HomeNursingCarePlan, HomeVisit) - the entityType/
+// entityId pointer pattern already used by AuditLog, not a real foreign
+// key, since one shared model covers all six rather than a separate
+// comments table per type. Exists so a supervisor can ask a student to
+// correct a pending (not yet co-signed) record asynchronously - neither
+// has to be present at the same time. Comments themselves are never
+// edited or deleted, same append-only reasoning as everywhere else in
+// this app.
+model RecordComment {
+  id String @id @default(cuid())
+
+  entityType String
+  entityId   String
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  content String
+
+  createdAt DateTime @default(now())
+
+  @@index([entityType, entityId])
 }

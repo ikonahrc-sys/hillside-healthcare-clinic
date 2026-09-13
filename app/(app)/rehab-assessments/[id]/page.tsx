@@ -5,6 +5,7 @@ import { getRehabAssessment } from "@/lib/services/rehab-service";
 import { formatMrn } from "@/lib/services/patient-service";
 import { can } from "@/lib/auth/authorize";
 import { canAuthorClinicalRecord } from "@/lib/auth/clinical-author";
+import { listComments } from "@/lib/services/record-comment-service";
 import {
   coSignRehabAssessmentAction,
   coSignTreatmentPlanAction,
@@ -12,6 +13,10 @@ import {
 } from "@/lib/actions/rehab";
 import { NewTreatmentPlanForm } from "@/components/rehab/new-treatment-plan-form";
 import { LogTherapySessionForm } from "@/components/rehab/log-therapy-session-form";
+import { EditAssessmentForm } from "@/components/rehab/edit-assessment-form";
+import { EditTreatmentPlanForm } from "@/components/rehab/edit-treatment-plan-form";
+import { EditTherapySessionForm } from "@/components/rehab/edit-therapy-session-form";
+import { CommentThread } from "@/components/shared/comment-thread";
 
 const DISCIPLINE_LABELS: Record<string, string> = {
   PHYSIOTHERAPY: "Physiotherapy",
@@ -47,6 +52,44 @@ export default async function RehabAssessmentPage({
     assessment.treatmentPlan.therapist.role.name === "STUDENT" &&
     !assessment.treatmentPlan.coSignedAt;
 
+  // Comments and self-edit are only ever relevant while a record is
+  // pending co-sign - see clinical-author.ts / RecordComment's design
+  // note. isAuthor/canSeeThread also matches record-comment-service.ts's
+  // own access check, so this never calls listComments for a viewer who
+  // has neither role and would just get an AuthorizationError.
+  const isAssessmentAuthor = user?.id === assessment.therapistId;
+  const canSeeAssessmentThread = isPendingCoSign && (canManage || isAssessmentAuthor);
+  const assessmentComments = canSeeAssessmentThread
+    ? (await listComments(user, "RehabAssessment", assessment.id)).map((c) => ({
+        ...c,
+        createdAt: c.createdAt.toLocaleString(),
+      }))
+    : [];
+
+  const isPlanAuthor = user?.id === assessment.treatmentPlan?.therapistId;
+  const canSeePlanThread = Boolean(isPlanPendingCoSign) && (canManage || isPlanAuthor);
+  const planComments =
+    canSeePlanThread && assessment.treatmentPlan
+      ? (await listComments(user, "RehabTreatmentPlan", assessment.treatmentPlan.id)).map((c) => ({
+          ...c,
+          createdAt: c.createdAt.toLocaleString(),
+        }))
+      : [];
+
+  const sessionExtras = new Map<
+    string,
+    { isAuthor: boolean; canSeeThread: boolean; comments: Awaited<ReturnType<typeof listComments>> }
+  >();
+  if (assessment.treatmentPlan) {
+    for (const s of assessment.treatmentPlan.therapySessions) {
+      const sessionPendingCoSign = s.therapist.role.name === "STUDENT" && !s.coSignedAt;
+      const isAuthor = user?.id === s.therapistId;
+      const canSeeThread = sessionPendingCoSign && (canManage || isAuthor);
+      const comments = canSeeThread ? await listComments(user, "TherapySession", s.id) : [];
+      sessionExtras.set(s.id, { isAuthor, canSeeThread, comments });
+    }
+  }
+
   return (
     <div>
       <div className="mb-4">
@@ -67,21 +110,44 @@ export default async function RehabAssessmentPage({
       </div>
 
       {isPendingCoSign && (
-        <div className="mb-4 flex items-center justify-between rounded border border-red-200 bg-red-50 p-3">
-          <p className="text-sm text-red-800">
-            Student-authored - pending supervisor co-sign before this is part
-            of the official record.
-          </p>
-          {canManage && (
-            <form action={coSignRehabAssessmentAction}>
-              <input type="hidden" name="assessmentId" value={assessment.id} />
-              <button
-                type="submit"
-                className="rounded bg-red-700 px-3 py-1.5 text-xs font-medium text-white"
-              >
-                Co-sign
-              </button>
-            </form>
+        <div className="mb-4 rounded border border-red-200 bg-red-50 p-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-red-800">
+              Student-authored - pending supervisor co-sign before this is part
+              of the official record.
+            </p>
+            {canManage && (
+              <form action={coSignRehabAssessmentAction}>
+                <input type="hidden" name="assessmentId" value={assessment.id} />
+                <button
+                  type="submit"
+                  className="rounded bg-red-700 px-3 py-1.5 text-xs font-medium text-white"
+                >
+                  Co-sign
+                </button>
+              </form>
+            )}
+          </div>
+          {canSeeAssessmentThread && (
+            <CommentThread
+              entityType="RehabAssessment"
+              entityId={assessment.id}
+              revalidatePathTarget={`/rehab-assessments/${assessment.id}`}
+              comments={assessmentComments}
+            />
+          )}
+          {isAssessmentAuthor && (
+            <EditAssessmentForm
+              assessmentId={assessment.id}
+              initial={{
+                discipline: assessment.discipline,
+                findings: assessment.findings,
+                functionalLimitations: assessment.functionalLimitations,
+                goals: assessment.goals,
+                precautions: assessment.precautions,
+                notes: assessment.notes,
+              }}
+            />
           )}
         </div>
       )}
@@ -138,25 +204,49 @@ export default async function RehabAssessmentPage({
         </h2>
 
         {isPlanPendingCoSign && (
-          <div className="mb-3 flex items-center justify-between rounded border border-red-200 bg-red-50 p-3">
-            <p className="text-sm text-red-800">
-              Student-authored - pending supervisor co-sign.
-            </p>
-            {canManage && (
-              <form action={coSignTreatmentPlanAction}>
-                <input type="hidden" name="assessmentId" value={assessment.id} />
-                <input
-                  type="hidden"
-                  name="treatmentPlanId"
-                  value={assessment.treatmentPlan!.id}
-                />
-                <button
-                  type="submit"
-                  className="rounded bg-red-700 px-3 py-1.5 text-xs font-medium text-white"
-                >
-                  Co-sign
-                </button>
-              </form>
+          <div className="mb-3 rounded border border-red-200 bg-red-50 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-red-800">
+                Student-authored - pending supervisor co-sign.
+              </p>
+              {canManage && (
+                <form action={coSignTreatmentPlanAction}>
+                  <input type="hidden" name="assessmentId" value={assessment.id} />
+                  <input
+                    type="hidden"
+                    name="treatmentPlanId"
+                    value={assessment.treatmentPlan!.id}
+                  />
+                  <button
+                    type="submit"
+                    className="rounded bg-red-700 px-3 py-1.5 text-xs font-medium text-white"
+                  >
+                    Co-sign
+                  </button>
+                </form>
+              )}
+            </div>
+            {canSeePlanThread && (
+              <CommentThread
+                entityType="RehabTreatmentPlan"
+                entityId={assessment.treatmentPlan!.id}
+                revalidatePathTarget={`/rehab-assessments/${assessment.id}`}
+                comments={planComments}
+              />
+            )}
+            {isPlanAuthor && (
+              <EditTreatmentPlanForm
+                assessmentId={assessment.id}
+                treatmentPlanId={assessment.treatmentPlan!.id}
+                initial={{
+                  goals: assessment.treatmentPlan!.goals,
+                  frequency: assessment.treatmentPlan!.frequency,
+                  reviewDate: assessment.treatmentPlan!.reviewDate
+                    ? assessment.treatmentPlan!.reviewDate.toISOString().slice(0, 10)
+                    : null,
+                  precautions: assessment.treatmentPlan!.precautions,
+                }}
+              />
             )}
           </div>
         )}
@@ -223,6 +313,7 @@ export default async function RehabAssessmentPage({
               {assessment.treatmentPlan.therapySessions.map((s) => {
                 const sessionPendingCoSign =
                   s.therapist.role.name === "STUDENT" && !s.coSignedAt;
+                const extra = sessionExtras.get(s.id)!;
                 return (
                   <li
                     key={s.id}
@@ -245,21 +336,46 @@ export default async function RehabAssessmentPage({
                       <p className="mt-1 text-sm text-slate-500">{s.notes}</p>
                     )}
                     {sessionPendingCoSign && (
-                      <div className="mt-2 flex items-center justify-between rounded border border-red-200 bg-red-50 p-2">
-                        <span className="text-xs text-red-800">
-                          Student-authored - pending co-sign
-                        </span>
-                        {canManage && (
-                          <form action={coSignTherapySessionAction}>
-                            <input type="hidden" name="assessmentId" value={assessment.id} />
-                            <input type="hidden" name="sessionId" value={s.id} />
-                            <button
-                              type="submit"
-                              className="rounded bg-red-700 px-2 py-1 text-xs font-medium text-white"
-                            >
-                              Co-sign
-                            </button>
-                          </form>
+                      <div className="mt-2 rounded border border-red-200 bg-red-50 p-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-red-800">
+                            Student-authored - pending co-sign
+                          </span>
+                          {canManage && (
+                            <form action={coSignTherapySessionAction}>
+                              <input type="hidden" name="assessmentId" value={assessment.id} />
+                              <input type="hidden" name="sessionId" value={s.id} />
+                              <button
+                                type="submit"
+                                className="rounded bg-red-700 px-2 py-1 text-xs font-medium text-white"
+                              >
+                                Co-sign
+                              </button>
+                            </form>
+                          )}
+                        </div>
+                        {extra.canSeeThread && (
+                          <CommentThread
+                            entityType="TherapySession"
+                            entityId={s.id}
+                            revalidatePathTarget={`/rehab-assessments/${assessment.id}`}
+                            comments={extra.comments.map((c) => ({
+                              ...c,
+                              createdAt: c.createdAt.toLocaleString(),
+                            }))}
+                          />
+                        )}
+                        {extra.isAuthor && (
+                          <EditTherapySessionForm
+                            assessmentId={assessment.id}
+                            sessionId={s.id}
+                            initial={{
+                              activities: s.activities,
+                              setting: s.setting,
+                              progress: s.progress,
+                              notes: s.notes,
+                            }}
+                          />
                         )}
                       </div>
                     )}
