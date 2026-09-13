@@ -550,6 +550,20 @@ enum RehabDiscipline {
   OCCUPATIONAL_THERAPY
 }
 
+// Which of Hillside's own real evaluation forms this assessment was taken
+// on - each has genuinely different fields (Pediatric has a milestone
+// checklist with nothing equivalent in Outpatient; Home Health has vitals
+// and ADL-focused functional assessment; Outpatient has the Medical Screen
+// checklist). One model with type-specific optional fields, rather than
+// three separate models, so RehabTreatmentPlan/TherapySession/co-sign/
+// comments keep pointing at a single assessmentId - splitting into three
+// models would have meant making that whole chain polymorphic.
+enum RehabEvaluationType {
+  OUTPATIENT
+  HOME_HEALTH
+  PEDIATRIC
+}
+
 model RehabAssessment {
   id String @id @default(cuid())
 
@@ -575,13 +589,91 @@ model RehabAssessment {
   coSignedBy       User?     @relation("RehabAssessmentCoSigner", fields: [coSignedByUserId], references: [id])
   coSignedAt       DateTime?
 
-  discipline RehabDiscipline
+  discipline     RehabDiscipline
+  evaluationType RehabEvaluationType @default(OUTPATIENT)
 
   findings              String
   functionalLimitations String?
   goals                 String?
   precautions           String?
   notes                 String?
+
+  // --- Shared across two or more of the three real forms ---
+  chiefComplaint        String?
+  mechanismOfInjury     String?
+  dateOfOnset           String?
+  painType              String[]
+  painAggravates        String?
+  painRelieves          String?
+  painTiming            String[]
+  painTimingDetail      String?
+  painLevelWorst        Int?
+  painLevelBest         Int?
+  painLevelCurrent      Int?
+  homeEquipment         String?
+  socialHistory         String?
+  medicationsAndTesting String?
+  medicalScreenFlags    String[]
+  sensoryExam           String?
+  reflexesExam          String?
+  patientGoals          String?
+  postureExam           String?
+  palpationExam         String?
+  gaitExam              String?
+  balanceExam           String?
+  fallsHistory          String?
+  strengthExam          String?
+  romExam               String?
+  specialTestsNote      String?
+  furtherObjectiveTesting String?
+  ptRecommendedFrequency  String?
+  initialTreatmentPlan    String?
+  referralsNote           String?
+  shortTermGoals          String[]
+  longTermGoals           String[]
+
+  // --- Home Health only ---
+  vitalsBp                 String?
+  vitalsHr                 String?
+  vitalsO2                 String?
+  vitalsTemp                String?
+  priorTreatment            String?
+  generalHealth             String?
+  priorFunctionalLevelAdUse String?
+  bedMobilityExam           String?
+  transfersExam             String?
+  adlsExam                  String?
+  motorExam                 String?
+  coordinationExam          String?
+  fatigueExam               String?
+  confusionMemoryExam       String?
+  hearingVisionSpeechExam   String?
+  otherNeuroFindings        String?
+
+  // --- Pediatric only ---
+  village                    String?
+  caregiver1                 String?
+  caregiver2                 String?
+  secondaryConcern            String?
+  birthHistory                 String?
+  milestoneHistoryNote         String?
+  relevantFamilyHistory        String?
+  relevantHomeEnvironment      String?
+  babySleepingEnvironment      String?
+  familyGoals                  String?
+  behavioralObservation        String?
+  followingDirections          String?
+  strengthsNote                String?
+  milestonesComment            String?
+  grossMotorNote               String?
+  neuromotorMuscleToneNote     String?
+  sensorimotorNote             String?
+  activityLimitationsNote      String?
+  assistiveDevicesPresent      String?
+  assistiveDevicesRecommended  String?
+  ptDiagnosisPrognosisJustification String?
+
+  milestones RehabMilestoneRecord[]
 
   treatmentPlan RehabTreatmentPlan?
 
@@ -590,6 +682,23 @@ model RehabAssessment {
 
   @@index([patientId])
   @@index([therapistId])
+}
+
+// The Pediatric form's milestone checklist (Visual Tracking, Head Control,
+// Rolling, Sitting, Quadruped, Crawling, Tall Kneeling, Standing, Walking)
+// - a real repeating list, so its own model rather than nine pairs of
+// flat columns on RehabAssessment.
+model RehabMilestoneRecord {
+  id String @id @default(cuid())
+
+  assessmentId String
+  assessment   RehabAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  milestone   String
+  achieved    Boolean
+  assistLevel String?
+
+  @@index([assessmentId])
 }
 
 enum TreatmentPlanStatus {
@@ -675,9 +784,16 @@ model TherapySession {
   sessionDate DateTime @default(now())
   setting     RehabVisitSetting @default(CLINIC)
 
-  activities String
-  progress   String?
-  notes      String?
+  // Real SOAP structure, matching Hillside's own progress note template -
+  // subjective/objective are the two sections a session narrative can't
+  // really be logged without, assessment/plan/HEP follow the same
+  // optional-until-filled-in pattern as everywhere else in this app.
+  subjective           String @default("")
+  objective            String @default("")
+  assessment           String?
+  plan                 String?
+  homeExerciseProgram  String?
+  additionalNotes      String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -17,10 +17,13 @@ export function EditTherapySessionForm({
   assessmentId: string;
   sessionId: string;
   initial: {
-    activities: string;
     setting: string;
-    progress: string | null;
-    notes: string | null;
+    subjective: string;
+    objective: string;
+    assessment: string | null;
+    plan: string | null;
+    homeExerciseProgram: string | null;
+    additionalNotes: string | null;
   };
 }) {
   const actionWithIds = updateTherapySessionAction.bind(null, assessmentId, sessionId);
@@ -36,11 +39,6 @@ export function EditTherapySessionForm({
       </p>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="activities" className={labelClass}>Activities</label>
-        <textarea id="activities" name="activities" rows={3} required defaultValue={initial.activities} className={inputClass} />
-      </div>
-
-      <div className="flex flex-col gap-1">
         <label htmlFor="setting" className={labelClass}>Where did this happen?</label>
         <select id="setting" name="setting" defaultValue={initial.setting} className={inputClass}>
           <option value="CLINIC">Clinic</option>
@@ -50,13 +48,33 @@ export function EditTherapySessionForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="progress" className={labelClass}>Progress</label>
-        <textarea id="progress" name="progress" rows={2} defaultValue={initial.progress ?? ""} className={inputClass} />
+        <label htmlFor="subjective" className={labelClass}>S - Subjective</label>
+        <textarea id="subjective" name="subjective" rows={3} required defaultValue={initial.subjective} className={inputClass} />
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="notes" className={labelClass}>Notes</label>
-        <textarea id="notes" name="notes" rows={2} defaultValue={initial.notes ?? ""} className={inputClass} />
+        <label htmlFor="objective" className={labelClass}>O - Objective</label>
+        <textarea id="objective" name="objective" rows={4} required defaultValue={initial.objective} className={inputClass} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="assessment" className={labelClass}>A - Assessment</label>
+        <textarea id="assessment" name="assessment" rows={3} defaultValue={initial.assessment ?? ""} className={inputClass} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="plan" className={labelClass}>P - Plan</label>
+        <textarea id="plan" name="plan" rows={3} defaultValue={initial.plan ?? ""} className={inputClass} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="homeExerciseProgram" className={labelClass}>Home Exercise Program</label>
+        <textarea id="homeExerciseProgram" name="homeExerciseProgram" rows={2} defaultValue={initial.homeExerciseProgram ?? ""} className={inputClass} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="additionalNotes" className={labelClass}>Additional notes</label>
+        <textarea id="additionalNotes" name="additionalNotes" rows={2} defaultValue={initial.additionalNotes ?? ""} className={inputClass} />
       </div>
 
       {state?.error && (

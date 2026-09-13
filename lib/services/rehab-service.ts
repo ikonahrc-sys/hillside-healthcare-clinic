@@ -40,6 +40,7 @@ export async function getRehabAssessment(
       patient: { select: { id: true, firstName: true, lastName: true, mrnNumber: true } },
       therapist: { select: { fullName: true, role: { select: { name: true } } } },
       coSignedBy: { select: { fullName: true } },
+      milestones: true,
       treatmentPlan: {
         include: {
           therapist: { select: { fullName: true, role: { select: { name: true } } } },
@@ -55,6 +56,94 @@ export async function getRehabAssessment(
       },
     },
   });
+}
+
+// Shared by createRehabAssessment/updateRehabAssessment - every field the
+// three real evaluation forms can populate, minus the ones that differ
+// between create and update (patientId/referralId/therapistId, and
+// milestones, which need list-replacement handling of their own).
+function buildAssessmentFieldData(input: RehabAssessmentInput) {
+  return {
+    discipline: input.discipline,
+    evaluationType: input.evaluationType,
+    findings: input.findings,
+    functionalLimitations: input.functionalLimitations,
+    goals: input.goals,
+    precautions: input.precautions,
+    notes: input.notes,
+
+    chiefComplaint: input.chiefComplaint,
+    mechanismOfInjury: input.mechanismOfInjury,
+    dateOfOnset: input.dateOfOnset,
+    painType: input.painType,
+    painAggravates: input.painAggravates,
+    painRelieves: input.painRelieves,
+    painTiming: input.painTiming,
+    painTimingDetail: input.painTimingDetail,
+    painLevelWorst: input.painLevelWorst,
+    painLevelBest: input.painLevelBest,
+    painLevelCurrent: input.painLevelCurrent,
+    homeEquipment: input.homeEquipment,
+    socialHistory: input.socialHistory,
+    medicationsAndTesting: input.medicationsAndTesting,
+    medicalScreenFlags: input.medicalScreenFlags,
+    sensoryExam: input.sensoryExam,
+    reflexesExam: input.reflexesExam,
+    patientGoals: input.patientGoals,
+    postureExam: input.postureExam,
+    palpationExam: input.palpationExam,
+    gaitExam: input.gaitExam,
+    balanceExam: input.balanceExam,
+    fallsHistory: input.fallsHistory,
+    strengthExam: input.strengthExam,
+    romExam: input.romExam,
+    specialTestsNote: input.specialTestsNote,
+    furtherObjectiveTesting: input.furtherObjectiveTesting,
+    ptRecommendedFrequency: input.ptRecommendedFrequency,
+    initialTreatmentPlan: input.initialTreatmentPlan,
+    referralsNote: input.referralsNote,
+    shortTermGoals: input.shortTermGoals,
+    longTermGoals: input.longTermGoals,
+
+    vitalsBp: input.vitalsBp,
+    vitalsHr: input.vitalsHr,
+    vitalsO2: input.vitalsO2,
+    vitalsTemp: input.vitalsTemp,
+    priorTreatment: input.priorTreatment,
+    generalHealth: input.generalHealth,
+    priorFunctionalLevelAdUse: input.priorFunctionalLevelAdUse,
+    bedMobilityExam: input.bedMobilityExam,
+    transfersExam: input.transfersExam,
+    adlsExam: input.adlsExam,
+    motorExam: input.motorExam,
+    coordinationExam: input.coordinationExam,
+    fatigueExam: input.fatigueExam,
+    confusionMemoryExam: input.confusionMemoryExam,
+    hearingVisionSpeechExam: input.hearingVisionSpeechExam,
+    otherNeuroFindings: input.otherNeuroFindings,
+
+    village: input.village,
+    caregiver1: input.caregiver1,
+    caregiver2: input.caregiver2,
+    secondaryConcern: input.secondaryConcern,
+    birthHistory: input.birthHistory,
+    milestoneHistoryNote: input.milestoneHistoryNote,
+    relevantFamilyHistory: input.relevantFamilyHistory,
+    relevantHomeEnvironment: input.relevantHomeEnvironment,
+    babySleepingEnvironment: input.babySleepingEnvironment,
+    familyGoals: input.familyGoals,
+    behavioralObservation: input.behavioralObservation,
+    followingDirections: input.followingDirections,
+    strengthsNote: input.strengthsNote,
+    milestonesComment: input.milestonesComment,
+    grossMotorNote: input.grossMotorNote,
+    neuromotorMuscleToneNote: input.neuromotorMuscleToneNote,
+    sensorimotorNote: input.sensorimotorNote,
+    activityLimitationsNote: input.activityLimitationsNote,
+    assistiveDevicesPresent: input.assistiveDevicesPresent,
+    assistiveDevicesRecommended: input.assistiveDevicesRecommended,
+    ptDiagnosisPrognosisJustification: input.ptDiagnosisPrognosisJustification,
+  };
 }
 
 export async function createRehabAssessment(
@@ -81,12 +170,10 @@ export async function createRehabAssessment(
       patientId: patient.id,
       referralId: referralId || null,
       therapistId: authedUser.id,
-      discipline: input.discipline,
-      findings: input.findings,
-      functionalLimitations: input.functionalLimitations,
-      goals: input.goals,
-      precautions: input.precautions,
-      notes: input.notes,
+      ...buildAssessmentFieldData(input),
+      milestones: input.milestones.length
+        ? { createMany: { data: input.milestones } }
+        : undefined,
     },
   });
 
@@ -96,7 +183,12 @@ export async function createRehabAssessment(
     action: "REHAB_ASSESSMENT_CREATE",
     entityType: "RehabAssessment",
     entityId: assessment.id,
-    metadata: { patientId: patient.id, discipline: input.discipline, studentAuthored: requiresCoSign },
+    metadata: {
+      patientId: patient.id,
+      discipline: input.discipline,
+      evaluationType: input.evaluationType,
+      studentAuthored: requiresCoSign,
+    },
   });
 
   return assessment;
@@ -127,15 +219,17 @@ export async function updateRehabAssessment(
     throw new Error("This assessment has already been co-signed and can no longer be edited.");
   }
 
+  // Milestones are a small, fully-replaceable list - simplest correct way
+  // to handle "the student re-submits the whole checklist" is delete and
+  // recreate rather than diffing individual rows.
   const updated = await prisma.rehabAssessment.update({
     where: { id: assessmentId },
     data: {
-      discipline: input.discipline,
-      findings: input.findings,
-      functionalLimitations: input.functionalLimitations,
-      goals: input.goals,
-      precautions: input.precautions,
-      notes: input.notes,
+      ...buildAssessmentFieldData(input),
+      milestones: {
+        deleteMany: {},
+        createMany: input.milestones.length ? { data: input.milestones } : undefined,
+      },
     },
   });
 
@@ -337,10 +431,13 @@ export async function logTherapySession(
       treatmentPlanId: plan.id,
       patientId: plan.patientId,
       therapistId: authedUser.id,
-      activities: input.activities,
+      subjective: input.subjective,
+      objective: input.objective,
       setting: input.setting,
-      progress: input.progress,
-      notes: input.notes,
+      assessment: input.assessment,
+      plan: input.plan,
+      homeExerciseProgram: input.homeExerciseProgram,
+      additionalNotes: input.additionalNotes,
     },
   });
 
@@ -379,10 +476,13 @@ export async function updateTherapySession(
   const updated = await prisma.therapySession.update({
     where: { id: sessionId },
     data: {
-      activities: input.activities,
+      subjective: input.subjective,
+      objective: input.objective,
       setting: input.setting,
-      progress: input.progress,
-      notes: input.notes,
+      assessment: input.assessment,
+      plan: input.plan,
+      homeExerciseProgram: input.homeExerciseProgram,
+      additionalNotes: input.additionalNotes,
     },
   });
 

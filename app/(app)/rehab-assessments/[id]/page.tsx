@@ -30,6 +30,22 @@ const SETTING_LABELS: Record<string, string> = {
   MOBILE_CLINIC: "Mobile Clinic",
 };
 
+const EVALUATION_TYPE_LABELS: Record<string, string> = {
+  OUTPATIENT: "Outpatient",
+  HOME_HEALTH: "Home Health",
+  PEDIATRIC: "Pediatric",
+};
+
+function Field({ label, value }: { label: string; value: string | null }) {
+  if (!value) return null;
+  return (
+    <div className="mb-3">
+      <h2 className="mb-1 text-sm font-semibold text-slate-700">{label}</h2>
+      <p className="text-sm text-slate-700">{value}</p>
+    </div>
+  );
+}
+
 export default async function RehabAssessmentPage({
   params,
 }: {
@@ -141,11 +157,90 @@ export default async function RehabAssessmentPage({
               assessmentId={assessment.id}
               initial={{
                 discipline: assessment.discipline,
+                evaluationType: assessment.evaluationType,
                 findings: assessment.findings,
                 functionalLimitations: assessment.functionalLimitations,
                 goals: assessment.goals,
                 precautions: assessment.precautions,
                 notes: assessment.notes,
+
+                chiefComplaint: assessment.chiefComplaint,
+                mechanismOfInjury: assessment.mechanismOfInjury,
+                dateOfOnset: assessment.dateOfOnset,
+                painType: assessment.painType,
+                painAggravates: assessment.painAggravates,
+                painRelieves: assessment.painRelieves,
+                painTiming: assessment.painTiming,
+                painTimingDetail: assessment.painTimingDetail,
+                painLevelWorst: assessment.painLevelWorst,
+                painLevelBest: assessment.painLevelBest,
+                painLevelCurrent: assessment.painLevelCurrent,
+                homeEquipment: assessment.homeEquipment,
+                socialHistory: assessment.socialHistory,
+                medicationsAndTesting: assessment.medicationsAndTesting,
+                medicalScreenFlags: assessment.medicalScreenFlags,
+                sensoryExam: assessment.sensoryExam,
+                reflexesExam: assessment.reflexesExam,
+                patientGoals: assessment.patientGoals,
+                postureExam: assessment.postureExam,
+                palpationExam: assessment.palpationExam,
+                gaitExam: assessment.gaitExam,
+                balanceExam: assessment.balanceExam,
+                fallsHistory: assessment.fallsHistory,
+                strengthExam: assessment.strengthExam,
+                romExam: assessment.romExam,
+                specialTestsNote: assessment.specialTestsNote,
+                furtherObjectiveTesting: assessment.furtherObjectiveTesting,
+                ptRecommendedFrequency: assessment.ptRecommendedFrequency,
+                initialTreatmentPlan: assessment.initialTreatmentPlan,
+                referralsNote: assessment.referralsNote,
+                shortTermGoals: assessment.shortTermGoals,
+                longTermGoals: assessment.longTermGoals,
+
+                vitalsBp: assessment.vitalsBp,
+                vitalsHr: assessment.vitalsHr,
+                vitalsO2: assessment.vitalsO2,
+                vitalsTemp: assessment.vitalsTemp,
+                priorTreatment: assessment.priorTreatment,
+                generalHealth: assessment.generalHealth,
+                priorFunctionalLevelAdUse: assessment.priorFunctionalLevelAdUse,
+                bedMobilityExam: assessment.bedMobilityExam,
+                transfersExam: assessment.transfersExam,
+                adlsExam: assessment.adlsExam,
+                motorExam: assessment.motorExam,
+                coordinationExam: assessment.coordinationExam,
+                fatigueExam: assessment.fatigueExam,
+                confusionMemoryExam: assessment.confusionMemoryExam,
+                hearingVisionSpeechExam: assessment.hearingVisionSpeechExam,
+                otherNeuroFindings: assessment.otherNeuroFindings,
+
+                village: assessment.village,
+                caregiver1: assessment.caregiver1,
+                caregiver2: assessment.caregiver2,
+                secondaryConcern: assessment.secondaryConcern,
+                birthHistory: assessment.birthHistory,
+                milestoneHistoryNote: assessment.milestoneHistoryNote,
+                relevantFamilyHistory: assessment.relevantFamilyHistory,
+                relevantHomeEnvironment: assessment.relevantHomeEnvironment,
+                babySleepingEnvironment: assessment.babySleepingEnvironment,
+                familyGoals: assessment.familyGoals,
+                behavioralObservation: assessment.behavioralObservation,
+                followingDirections: assessment.followingDirections,
+                strengthsNote: assessment.strengthsNote,
+                milestonesComment: assessment.milestonesComment,
+                grossMotorNote: assessment.grossMotorNote,
+                neuromotorMuscleToneNote: assessment.neuromotorMuscleToneNote,
+                sensorimotorNote: assessment.sensorimotorNote,
+                activityLimitationsNote: assessment.activityLimitationsNote,
+                assistiveDevicesPresent: assessment.assistiveDevicesPresent,
+                assistiveDevicesRecommended: assessment.assistiveDevicesRecommended,
+                ptDiagnosisPrognosisJustification: assessment.ptDiagnosisPrognosisJustification,
+
+                milestones: assessment.milestones.map((m) => ({
+                  milestone: m.milestone,
+                  achieved: m.achieved,
+                  assistLevel: m.assistLevel,
+                })),
               }}
             />
           )}
@@ -160,34 +255,175 @@ export default async function RehabAssessmentPage({
       )}
 
       <div className="rounded border border-slate-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-slate-700">Findings</h2>
-        <p className="mb-3 text-sm text-slate-700">{assessment.findings}</p>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          {EVALUATION_TYPE_LABELS[assessment.evaluationType]} Evaluation
+        </h2>
 
-        {assessment.functionalLimitations && (
+        <Field label={assessment.evaluationType === "PEDIATRIC" ? "Primary Concern" : "Current Complaint"} value={assessment.chiefComplaint} />
+        {assessment.evaluationType === "OUTPATIENT" && <Field label="Mechanism of Injury" value={assessment.mechanismOfInjury} />}
+        <Field label="Date of Onset" value={assessment.dateOfOnset} />
+        <Field label="Functional Limitations (PLOF and CLOF)" value={assessment.functionalLimitations} />
+
+        {assessment.evaluationType === "HOME_HEALTH" && (
           <>
-            <h2 className="mb-1 text-sm font-semibold text-slate-700">
-              Functional limitations
-            </h2>
-            <p className="mb-3 text-sm text-slate-700">
-              {assessment.functionalLimitations}
-            </p>
+            <Field label="Prior Treatment" value={assessment.priorTreatment} />
+            <Field label="General Health" value={assessment.generalHealth} />
+            <Field label="Prior Functional Level / AD Use" value={assessment.priorFunctionalLevelAdUse} />
+            <Field
+              label="Vitals"
+              value={[assessment.vitalsBp, assessment.vitalsHr, assessment.vitalsO2, assessment.vitalsTemp]
+                .filter(Boolean)
+                .join(" / ") || null}
+            />
           </>
         )}
 
+        {assessment.evaluationType === "PEDIATRIC" && (
+          <>
+            <Field label="Village" value={assessment.village} />
+            <Field label="Caregivers" value={[assessment.caregiver1, assessment.caregiver2].filter(Boolean).join(", ") || null} />
+            <Field label="Secondary Concern" value={assessment.secondaryConcern} />
+            <Field label="Birth History" value={assessment.birthHistory} />
+            <Field label="Milestone History" value={assessment.milestoneHistoryNote} />
+            <Field label="Relevant Family History" value={assessment.relevantFamilyHistory} />
+            <Field label="Relevant Home Environment" value={assessment.relevantHomeEnvironment} />
+            <Field label="Baby Sleeping Environment" value={assessment.babySleepingEnvironment} />
+            <Field label="Family Goals" value={assessment.familyGoals} />
+            <Field label="Behavioral Observation" value={assessment.behavioralObservation} />
+            <Field label="Following Directions" value={assessment.followingDirections} />
+            <Field label="Strengths" value={assessment.strengthsNote} />
+          </>
+        )}
+
+        {assessment.evaluationType !== "PEDIATRIC" && (
+          <>
+            <Field
+              label="Pain"
+              value={
+                assessment.painType.length || assessment.painLevelCurrent != null
+                  ? [
+                      assessment.painType.join(", "),
+                      assessment.painLevelCurrent != null ? `currently ${assessment.painLevelCurrent}/10` : null,
+                      assessment.painLevelWorst != null ? `worst ${assessment.painLevelWorst}/10` : null,
+                      assessment.painLevelBest != null ? `best ${assessment.painLevelBest}/10` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" - ")
+                  : null
+              }
+            />
+            <Field label="Aggravates" value={assessment.painAggravates} />
+            <Field label="Relieves" value={assessment.painRelieves} />
+            <Field
+              label="Pain Timing"
+              value={[...assessment.painTiming, assessment.painTimingDetail].filter(Boolean).join(", ") || null}
+            />
+          </>
+        )}
+
+        {assessment.evaluationType === "OUTPATIENT" && <Field label="Home/Equipment" value={assessment.homeEquipment} />}
+        <Field label="Social/Vocational History" value={assessment.socialHistory} />
+        <Field label="PMH/Precautions" value={assessment.precautions} />
+        <Field label="Medications/Diagnostic Testing" value={assessment.medicationsAndTesting} />
+        {assessment.evaluationType === "OUTPATIENT" && (
+          <Field label="Medical Screen" value={assessment.medicalScreenFlags.join(", ") || null} />
+        )}
+        {assessment.evaluationType === "HOME_HEALTH" && <Field label="Falls History" value={assessment.fallsHistory} />}
+        <Field label="Sensory" value={assessment.sensoryExam} />
+        <Field label="Reflexes" value={assessment.reflexesExam} />
+        <Field label="Patient/Family Goals" value={assessment.patientGoals} />
+
+        {assessment.evaluationType === "HOME_HEALTH" && (
+          <>
+            <Field label="Bed Mobility" value={assessment.bedMobilityExam} />
+            <Field label="Transfers" value={assessment.transfersExam} />
+            <Field label="ADLs" value={assessment.adlsExam} />
+          </>
+        )}
+
+        {assessment.evaluationType === "PEDIATRIC" && assessment.milestones.length > 0 && (
+          <div className="mb-3">
+            <h2 className="mb-1 text-sm font-semibold text-slate-700">Milestones Achieved</h2>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase text-slate-400">
+                  <th className="pb-1">Milestone</th>
+                  <th className="pb-1">Achieved</th>
+                  <th className="pb-1">Assist Level</th>
+                </tr>
+              </thead>
+              <tbody>
+                {assessment.milestones.map((m) => (
+                  <tr key={m.id} className="border-t border-slate-100">
+                    <td className="py-1 pr-2 text-slate-700">{m.milestone}</td>
+                    <td className="py-1 pr-2 text-slate-700">{m.achieved ? "Yes" : "No"}</td>
+                    <td className="py-1 text-slate-700">{m.assistLevel ?? "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <Field label="Comments" value={assessment.milestonesComment} />
+          </div>
+        )}
+
+        <Field label="Posture/Structural Alignment" value={assessment.postureExam} />
+        {assessment.evaluationType === "OUTPATIENT" && <Field label="Palpation" value={assessment.palpationExam} />}
+        <Field label={assessment.evaluationType === "HOME_HEALTH" ? "Gait/Stairs" : "Gait/General Observation"} value={assessment.gaitExam} />
+        <Field label={assessment.evaluationType === "PEDIATRIC" ? "Balance/Coordination" : "Balance"} value={assessment.balanceExam} />
+        <Field label="Strength" value={assessment.strengthExam} />
+        <Field label={assessment.evaluationType === "PEDIATRIC" ? "ROM/Strength/Gross Motor Assessment" : "ROM"} value={assessment.romExam} />
+
+        {assessment.evaluationType === "OUTPATIENT" && (
+          <>
+            <Field label="Further Objective Testing" value={assessment.furtherObjectiveTesting} />
+            <Field label="Special Tests" value={assessment.specialTestsNote} />
+          </>
+        )}
+
+        {assessment.evaluationType === "HOME_HEALTH" && (
+          <>
+            <Field label="Motor" value={assessment.motorExam} />
+            <Field label="Coordination" value={assessment.coordinationExam} />
+            <Field label="Fatigue" value={assessment.fatigueExam} />
+            <Field label="Confusion/Memory" value={assessment.confusionMemoryExam} />
+            <Field label="Hearing/Vision/Speech" value={assessment.hearingVisionSpeechExam} />
+            <Field label="Other (wounds, etc)" value={assessment.otherNeuroFindings} />
+          </>
+        )}
+
+        {assessment.evaluationType === "PEDIATRIC" && (
+          <>
+            <Field label="Neuromotor/Muscle Tone Assessment" value={assessment.grossMotorNote} />
+            <Field label="Sensorimotor Assessment" value={assessment.sensorimotorNote} />
+            <Field label="Activity Limitations/Participation Restrictions" value={assessment.activityLimitationsNote} />
+            <Field label="ADs Already Present in Home" value={assessment.assistiveDevicesPresent} />
+            <Field label="May Benefit From Additional ADs" value={assessment.assistiveDevicesRecommended} />
+          </>
+        )}
+
+        <h2 className="mb-1 mt-2 text-sm font-semibold text-slate-700">
+          {assessment.evaluationType === "PEDIATRIC" ? "PT Diagnosis/Prognosis/Justification" : "Assessment"}
+        </h2>
+        <p className="mb-3 text-sm text-slate-700">{assessment.findings}</p>
+
         {assessment.goals && (
           <>
-            <h2 className="mb-1 text-sm font-semibold text-slate-700">Goals</h2>
+            <h2 className="mb-1 text-sm font-semibold text-slate-700">Plan</h2>
             <p className="mb-3 text-sm text-slate-700">{assessment.goals}</p>
           </>
         )}
 
-        {assessment.precautions && (
-          <>
-            <h2 className="mb-1 text-sm font-semibold text-slate-700">
-              Precautions
-            </h2>
-            <p className="mb-3 text-sm text-slate-700">{assessment.precautions}</p>
-          </>
+        {assessment.evaluationType !== "PEDIATRIC" && (
+          <Field label="PT Recommended Frequency" value={assessment.ptRecommendedFrequency} />
+        )}
+        <Field label="Initial Treatment/Education Provided/HEP" value={assessment.initialTreatmentPlan} />
+        {assessment.evaluationType === "OUTPATIENT" && <Field label="Referrals" value={assessment.referralsNote} />}
+
+        {assessment.shortTermGoals.length > 0 && (
+          <Field label="Short Term Goals" value={assessment.shortTermGoals.join("; ")} />
+        )}
+        {assessment.longTermGoals.length > 0 && (
+          <Field label="Long Term Goals" value={assessment.longTermGoals.join("; ")} />
         )}
 
         {assessment.notes && (
@@ -326,15 +562,18 @@ export default async function RehabAssessmentPage({
                         {SETTING_LABELS[s.setting]}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-slate-700">{s.activities}</p>
-                    {s.progress && (
-                      <p className="mt-1 text-sm text-slate-600">
-                        Progress: {s.progress}
-                      </p>
-                    )}
-                    {s.notes && (
-                      <p className="mt-1 text-sm text-slate-500">{s.notes}</p>
-                    )}
+                    <div className="mt-1 flex flex-col gap-1 text-sm text-slate-700">
+                      <p><span className="font-medium">S:</span> {s.subjective}</p>
+                      <p><span className="font-medium">O:</span> {s.objective}</p>
+                      {s.assessment && <p><span className="font-medium">A:</span> {s.assessment}</p>}
+                      {s.plan && <p><span className="font-medium">P:</span> {s.plan}</p>}
+                      {s.homeExerciseProgram && (
+                        <p><span className="font-medium">HEP:</span> {s.homeExerciseProgram}</p>
+                      )}
+                      {s.additionalNotes && (
+                        <p className="text-slate-500">{s.additionalNotes}</p>
+                      )}
+                    </div>
                     {sessionPendingCoSign && (
                       <div className="mt-2 rounded border border-red-200 bg-red-50 p-2">
                         <div className="flex items-center justify-between">
@@ -370,10 +609,13 @@ export default async function RehabAssessmentPage({
                             assessmentId={assessment.id}
                             sessionId={s.id}
                             initial={{
-                              activities: s.activities,
                               setting: s.setting,
-                              progress: s.progress,
-                              notes: s.notes,
+                              subjective: s.subjective,
+                              objective: s.objective,
+                              assessment: s.assessment,
+                              plan: s.plan,
+                              homeExerciseProgram: s.homeExerciseProgram,
+                              additionalNotes: s.additionalNotes,
                             }}
                           />
                         )}

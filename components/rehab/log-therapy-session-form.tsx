@@ -25,19 +25,6 @@ export function LogTherapySessionForm({
   return (
     <form action={formAction} className="flex max-w-2xl flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <label htmlFor="activities" className={labelClass}>
-          Activities
-        </label>
-        <textarea
-          id="activities"
-          name="activities"
-          rows={3}
-          required
-          className={inputClass}
-        />
-      </div>
-
-      <div className="flex flex-col gap-1">
         <label htmlFor="setting" className={labelClass}>
           Where did this happen?
         </label>
@@ -49,17 +36,45 @@ export function LogTherapySessionForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="progress" className={labelClass}>
-          Progress
+        <label htmlFor="subjective" className={labelClass}>
+          S - Subjective
         </label>
-        <textarea id="progress" name="progress" rows={2} className={inputClass} />
+        <textarea id="subjective" name="subjective" rows={3} required className={inputClass} />
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="notes" className={labelClass}>
-          Notes
+        <label htmlFor="objective" className={labelClass}>
+          O - Objective
         </label>
-        <textarea id="notes" name="notes" rows={2} className={inputClass} />
+        <textarea id="objective" name="objective" rows={4} required className={inputClass} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="assessment" className={labelClass}>
+          A - Assessment
+        </label>
+        <textarea id="assessment" name="assessment" rows={3} className={inputClass} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="plan" className={labelClass}>
+          P - Plan
+        </label>
+        <textarea id="plan" name="plan" rows={3} className={inputClass} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="homeExerciseProgram" className={labelClass}>
+          Home Exercise Program
+        </label>
+        <textarea id="homeExerciseProgram" name="homeExerciseProgram" rows={2} className={inputClass} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="additionalNotes" className={labelClass}>
+          Additional notes
+        </label>
+        <textarea id="additionalNotes" name="additionalNotes" rows={2} className={inputClass} />
       </div>
 
       {state?.error && (
