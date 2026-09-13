@@ -32,3 +32,14 @@ export const resetPasswordSchema = z.object({
 });
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+export const updateUserRoleSchema = z.object({
+  roleId: z.string().trim().min(1, "Role is required"),
+  departmentId: z
+    .string()
+    .trim()
+    .nullish()
+    .transform((v) => (v && v !== "" ? v : undefined)),
+});
+
+export type UpdateUserRoleInput = z.infer<typeof updateUserRoleSchema>;

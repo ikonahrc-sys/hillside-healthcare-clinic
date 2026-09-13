@@ -4,7 +4,7 @@ import { authorize, requireAuthenticated } from "@/lib/auth/authorize";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { logAudit } from "@/lib/audit/log";
 import type { CurrentUser } from "@/lib/auth/session";
-import type { CreateUserInput } from "@/lib/validation/user";
+import type { CreateUserInput, UpdateUserRoleInput } from "@/lib/validation/user";
 
 export async function listUsers(user: CurrentUser | null) {
   await authorize(user, "user:manage");
@@ -80,6 +80,75 @@ export async function createUser(
   });
 
   return newUser;
+}
+
+export async function getUser(user: CurrentUser | null, targetUserId: string) {
+  await authorize(user, "user:manage");
+
+  return prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      roleId: true,
+      departmentId: true,
+    },
+  });
+}
+
+// Changing your own role/department is blocked for the same reason
+// self-deactivation is - an accidental self-demotion (e.g. off
+// Administrator) could lock the only person who can undo it out of the
+// one page that could undo it.
+export async function updateUserRole(
+  user: CurrentUser | null,
+  targetUserId: string,
+  input: UpdateUserRoleInput,
+) {
+  const authedUser = await authorize(user, "user:manage");
+
+  if (targetUserId === authedUser.id) {
+    throw new Error("You cannot change your own role.");
+  }
+
+  const target = await prisma.user.findUnique({ where: { id: targetUserId } });
+  if (!target) {
+    throw new Error("User not found");
+  }
+
+  const role = await prisma.role.findUnique({ where: { id: input.roleId } });
+  if (!role) {
+    throw new Error("Selected role does not exist");
+  }
+
+  if (input.departmentId) {
+    const department = await prisma.department.findUnique({
+      where: { id: input.departmentId },
+    });
+    if (!department) {
+      throw new Error("Selected department does not exist");
+    }
+  }
+
+  await prisma.user.update({
+    where: { id: targetUserId },
+    data: { roleId: input.roleId, departmentId: input.departmentId ?? null },
+  });
+
+  await logAudit({
+    actorId: authedUser.id,
+    actorEmail: authedUser.email,
+    action: "USER_ROLE_UPDATE",
+    entityType: "User",
+    entityId: targetUserId,
+    metadata: {
+      fromRoleId: target.roleId,
+      toRoleId: input.roleId,
+      fromDepartmentId: target.departmentId,
+      toDepartmentId: input.departmentId ?? null,
+    },
+  });
 }
 
 export async function setUserStatus(

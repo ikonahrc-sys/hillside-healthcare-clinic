@@ -54,6 +54,14 @@ export default async function UsersPage() {
               >
                 {u.status}
               </span>
+              {u.id !== user.id && (
+                <Link
+                  href={`/users/${u.id}/edit`}
+                  className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                >
+                  Edit Role
+                </Link>
+              )}
               <Link
                 href={`/users/${u.id}/reset-password`}
                 className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"

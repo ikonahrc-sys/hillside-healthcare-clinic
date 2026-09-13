@@ -6,12 +6,14 @@ import {
   createUserSchema,
   changePasswordSchema,
   resetPasswordSchema,
+  updateUserRoleSchema,
 } from "@/lib/validation/user";
 import {
   createUser,
   setUserStatus,
   changeOwnPassword,
   resetUserPassword,
+  updateUserRole,
 } from "@/lib/services/user-service";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AuthorizationError } from "@/lib/auth/authorize";
@@ -125,6 +127,39 @@ export async function resetUserPasswordAction(
   } catch (e) {
     if (e instanceof AuthorizationError) {
       return { error: "You are not authorized to reset passwords." };
+    }
+    if (e instanceof Error) {
+      return { error: e.message };
+    }
+    throw e;
+  }
+
+  redirect("/users");
+}
+
+export type UpdateUserRoleState = { error: string } | null;
+
+export async function updateUserRoleAction(
+  targetUserId: string,
+  _prevState: UpdateUserRoleState,
+  formData: FormData,
+): Promise<UpdateUserRoleState> {
+  const parsed = updateUserRoleSchema.safeParse({
+    roleId: formData.get("roleId"),
+    departmentId: formData.get("departmentId"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const user = await getCurrentUser();
+
+  try {
+    await updateUserRole(user, targetUserId, parsed.data);
+  } catch (e) {
+    if (e instanceof AuthorizationError) {
+      return { error: "You are not authorized to edit user roles." };
     }
     if (e instanceof Error) {
       return { error: e.message };
