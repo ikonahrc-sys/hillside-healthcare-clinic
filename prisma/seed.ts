@@ -38,10 +38,14 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     "inventory:manage",
     "appointment:manage",
   ],
-  PHYSIOTHERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
-  SPEECH_THERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
-  OCCUPATIONAL_THERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
-  HOME_NURSING_STAFF: ["patient:read", "referral:manage", "homenursing:manage", "appointment:manage"],
+  // Rehab and Home Nursing can register a new patient directly (e.g. a
+  // walk-in who hasn't seen a doctor first), same as Medical - Pharmacy
+  // and Public Health deliberately don't get patient:write, since their
+  // patients always arrive via referral or an existing record.
+  PHYSIOTHERAPIST: ["patient:read", "patient:write", "referral:manage", "rehab:manage", "appointment:manage"],
+  SPEECH_THERAPIST: ["patient:read", "patient:write", "referral:manage", "rehab:manage", "appointment:manage"],
+  OCCUPATIONAL_THERAPIST: ["patient:read", "patient:write", "referral:manage", "rehab:manage", "appointment:manage"],
+  HOME_NURSING_STAFF: ["patient:read", "patient:write", "referral:manage", "homenursing:manage", "appointment:manage"],
   // patient:read is broad on purpose - which patients actually come into
   // view is scoped to the student's active placement department at query
   // time (see listPatientsForStudent), not expressed here. Authoring
@@ -70,6 +74,7 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   ],
   REHABILITATION_DIRECTOR: [
     "patient:read",
+    "patient:write",
     "referral:manage",
     "rehab:manage",
     "appointment:manage",
@@ -77,6 +82,7 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   ],
   HEAD_OF_NURSING: [
     "patient:read",
+    "patient:write",
     "referral:manage",
     "homenursing:manage",
     "appointment:manage",
