@@ -38,6 +38,17 @@ export function LogTherapySessionForm({
       </div>
 
       <div className="flex flex-col gap-1">
+        <label htmlFor="setting" className={labelClass}>
+          Where did this happen?
+        </label>
+        <select id="setting" name="setting" defaultValue="CLINIC" className={inputClass}>
+          <option value="CLINIC">Clinic</option>
+          <option value="HOME_HEALTH_VISIT">Home Health Visit</option>
+          <option value="MOBILE_CLINIC">Mobile Clinic</option>
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1">
         <label htmlFor="progress" className={labelClass}>
           Progress
         </label>

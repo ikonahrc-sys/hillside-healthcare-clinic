@@ -637,6 +637,17 @@ model RehabTreatmentPlan {
   @@index([therapistId])
 }
 
+// Where the session actually took place - Rehab's caseload reporting
+// breaks activity down by this, not just by discipline. CLINIC is the
+// default/typical case and deliberately not named in the department's own
+// reporting categories (only the other two get called out), but it's
+// still tracked here for completeness.
+enum RehabVisitSetting {
+  CLINIC
+  HOME_HEALTH_VISIT
+  MOBILE_CLINIC
+}
+
 // A single logged visit against an active treatment plan - what Consultation
 // is to a Medical visit. Deliberately not linked to a specific Appointment
 // row, same reasoning as Consultation/Appointment: the appointment is just
@@ -661,6 +672,7 @@ model TherapySession {
   coSignedAt       DateTime?
 
   sessionDate DateTime @default(now())
+  setting     RehabVisitSetting @default(CLINIC)
 
   activities String
   progress   String?

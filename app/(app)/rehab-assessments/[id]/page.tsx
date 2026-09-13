@@ -19,6 +19,12 @@ const DISCIPLINE_LABELS: Record<string, string> = {
   OCCUPATIONAL_THERAPY: "Occupational Therapy",
 };
 
+const SETTING_LABELS: Record<string, string> = {
+  CLINIC: "Clinic",
+  HOME_HEALTH_VISIT: "Home Health Visit",
+  MOBILE_CLINIC: "Mobile Clinic",
+};
+
 export default async function RehabAssessmentPage({
   params,
 }: {
@@ -225,6 +231,8 @@ export default async function RehabAssessmentPage({
                     <div className="flex items-baseline justify-between">
                       <span className="text-xs font-medium text-slate-400">
                         {s.sessionDate.toDateString()} - {s.therapist.fullName}
+                        {" - "}
+                        {SETTING_LABELS[s.setting]}
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-slate-700">{s.activities}</p>

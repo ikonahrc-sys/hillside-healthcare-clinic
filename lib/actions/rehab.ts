@@ -68,6 +68,7 @@ export async function logTherapySessionAction(
 ): Promise<RehabActionState> {
   const parsed = therapySessionSchema.safeParse({
     activities: formData.get("activities"),
+    setting: formData.get("setting"),
     progress: formData.get("progress"),
     notes: formData.get("notes"),
   });

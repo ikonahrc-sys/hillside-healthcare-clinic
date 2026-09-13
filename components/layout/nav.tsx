@@ -6,6 +6,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "My Account", href: "/account" },
   { label: "Patients", href: "/patients" },
+  { label: "Department Data", href: "/department-data" },
   { label: "Pharmacy", href: "/pharmacy" },
   { label: "Clinical Preparation" },
   { label: "Referrals", href: "/referrals" },
@@ -34,7 +35,6 @@ export function Nav({
     ? [
         ...BASE_NAV_ITEMS.slice(0, -2),
         { label: "Placements", href: "/placements" },
-        { label: "Department Data", href: "/department-data" },
         ...BASE_NAV_ITEMS.slice(-2),
       ]
     : BASE_NAV_ITEMS;

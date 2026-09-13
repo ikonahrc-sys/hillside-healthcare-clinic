@@ -249,6 +249,7 @@ export async function logTherapySession(
       patientId: plan.patientId,
       therapistId: authedUser.id,
       activities: input.activities,
+      setting: input.setting,
       progress: input.progress,
       notes: input.notes,
     },
