@@ -34,6 +34,7 @@ export function Nav({
     ? [
         ...BASE_NAV_ITEMS.slice(0, -2),
         { label: "Placements", href: "/placements" },
+        { label: "Department Data", href: "/department-data" },
         ...BASE_NAV_ITEMS.slice(-2),
       ]
     : BASE_NAV_ITEMS;
