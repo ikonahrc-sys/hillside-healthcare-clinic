@@ -16,9 +16,11 @@ const BASE_NAV_ITEMS: NavItem[] = [
 export function Nav({
   canManagePlacements,
   canManageClinicalPrep,
+  canManageUsers,
 }: {
   canManagePlacements: boolean;
   canManageClinicalPrep: boolean;
+  canManageUsers: boolean;
 }) {
   // "Placements" is inserted next to "Users & Roles" rather than added to
   // the static list unconditionally - it's real and permission-gated, the
@@ -46,6 +48,12 @@ export function Nav({
   if (canManagePlacements) {
     items = items.map((item) =>
       item.label === "Reports" ? { ...item, href: "/reports" } : item,
+    );
+  }
+
+  if (canManageUsers) {
+    items = items.map((item) =>
+      item.label === "Users & Roles" ? { ...item, href: "/users" } : item,
     );
   }
 

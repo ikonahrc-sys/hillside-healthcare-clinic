@@ -8,12 +8,14 @@ export function AppShell({
   user,
   canManagePlacements,
   canManageClinicalPrep,
+  canManageUsers,
   unreadNotificationCount,
   children,
 }: {
   user: CurrentUser;
   canManagePlacements: boolean;
   canManageClinicalPrep: boolean;
+  canManageUsers: boolean;
   unreadNotificationCount: number;
   children: ReactNode;
 }) {
@@ -28,6 +30,7 @@ export function AppShell({
         <Nav
           canManagePlacements={canManagePlacements}
           canManageClinicalPrep={canManageClinicalPrep}
+          canManageUsers={canManageUsers}
         />
       </aside>
 
