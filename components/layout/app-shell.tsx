@@ -9,6 +9,7 @@ export function AppShell({
   canManagePlacements,
   canManageClinicalPrep,
   canManageUsers,
+  canManagePublicHealth,
   unreadNotificationCount,
   children,
 }: {
@@ -16,6 +17,7 @@ export function AppShell({
   canManagePlacements: boolean;
   canManageClinicalPrep: boolean;
   canManageUsers: boolean;
+  canManagePublicHealth: boolean;
   unreadNotificationCount: number;
   children: ReactNode;
 }) {
@@ -31,6 +33,7 @@ export function AppShell({
           canManagePlacements={canManagePlacements}
           canManageClinicalPrep={canManageClinicalPrep}
           canManageUsers={canManageUsers}
+          canManagePublicHealth={canManagePublicHealth}
         />
       </aside>
 

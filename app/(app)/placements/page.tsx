@@ -58,11 +58,19 @@ export default async function PlacementsPage() {
                     {p.supervisor ? ` - supervised by ${p.supervisor.fullName}` : ""}
                   </p>
                 </div>
-                <span
-                  className={`rounded px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[p.status]}`}
-                >
-                  {p.status}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`rounded px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[p.status]}`}
+                  >
+                    {p.status}
+                  </span>
+                  <Link
+                    href={`/placements/${p.id}/edit`}
+                    className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                  >
+                    Reassign
+                  </Link>
+                </div>
               </div>
               <p className="mt-2 text-sm text-slate-700">
                 {p.startDate.toDateString()} - {p.endDate.toDateString()}

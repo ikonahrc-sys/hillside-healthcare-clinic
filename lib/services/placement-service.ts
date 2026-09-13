@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
-import { authorize } from "@/lib/auth/authorize";
+import { authorize, AuthorizationError } from "@/lib/auth/authorize";
 import { logAudit } from "@/lib/audit/log";
 import type { CurrentUser } from "@/lib/auth/session";
 import type { CreatePlacementInput } from "@/lib/validation/placement";
@@ -12,10 +12,21 @@ function computeInitialStatus(startDate: Date, endDate: Date): "UPCOMING" | "ACT
   return "ACTIVE";
 }
 
+// Administrator manages placements across every department. Every other
+// placement:manage holder is a department Director/Head (see
+// prisma/seed.ts's ROLE_PERMISSIONS) and is scoped to their own department
+// only - null means unrestricted.
+function scopeDepartmentId(user: CurrentUser): string | null {
+  if (user.role.name === "ADMINISTRATOR") return null;
+  return user.departmentId;
+}
+
 export async function listPlacements(user: CurrentUser | null) {
-  await authorize(user, "placement:manage");
+  const authedUser = await authorize(user, "placement:manage");
+  const scopeId = scopeDepartmentId(authedUser);
 
   return prisma.clinicalPlacement.findMany({
+    where: scopeId ? { departmentId: scopeId } : undefined,
     include: {
       student: { select: { fullName: true, email: true } },
       department: { select: { name: true } },
@@ -63,6 +74,11 @@ export async function createPlacement(
   });
   if (!department) {
     throw new Error("Selected department does not exist");
+  }
+
+  const scopeId = scopeDepartmentId(authedUser);
+  if (scopeId && department.id !== scopeId) {
+    throw new Error("You can only create placements within your own department.");
   }
 
   // Unlike student/department, this one was previously taken as-is from
@@ -116,6 +132,120 @@ export async function createPlacement(
       departmentId: department.id,
       startDate: input.startDate,
       endDate: input.endDate,
+    },
+  });
+
+  return placement;
+}
+
+// For a department Director/Head's dashboard widget - their own
+// department's placements that haven't ended yet, not the full admin
+// history view listPlacements gives. Administrator has no single "own
+// department" for this to mean anything, so it returns nothing for them
+// rather than the whole facility.
+export async function listActiveDepartmentPlacements(user: CurrentUser | null) {
+  const authedUser = await authorize(user, "placement:manage");
+  const scopeId = scopeDepartmentId(authedUser);
+  if (!scopeId) return [];
+
+  return prisma.clinicalPlacement.findMany({
+    where: { departmentId: scopeId, endDate: { gte: new Date() }, status: { not: "SUSPENDED" } },
+    include: {
+      student: { select: { fullName: true, email: true } },
+      supervisor: { select: { fullName: true } },
+    },
+    orderBy: { startDate: "asc" },
+  });
+}
+
+export async function getPlacement(user: CurrentUser | null, placementId: string) {
+  const authedUser = await authorize(user, "placement:manage");
+
+  const placement = await prisma.clinicalPlacement.findUnique({
+    where: { id: placementId },
+    include: {
+      student: { select: { fullName: true, email: true } },
+      department: { select: { id: true, name: true } },
+      supervisor: { select: { fullName: true } },
+    },
+  });
+  if (!placement) return null;
+
+  const scopeId = scopeDepartmentId(authedUser);
+  if (scopeId && placement.departmentId !== scopeId) {
+    return null;
+  }
+
+  return placement;
+}
+
+// Lets a director "post a student to another department" or swap their
+// supervisor - a director may only touch a placement whose CURRENT
+// department is their own (Administrator is unrestricted), but may move it
+// to any department, same as scopeDepartmentId enforces elsewhere in this
+// file. Dates/status are untouched - this is a reassignment, not a new
+// placement, so the overlap check createPlacement runs doesn't apply here.
+export async function reassignPlacement(
+  user: CurrentUser | null,
+  placementId: string,
+  input: { departmentId?: string; supervisorId?: string | null },
+) {
+  const authedUser = await authorize(user, "placement:manage");
+
+  const existing = await prisma.clinicalPlacement.findUnique({
+    where: { id: placementId },
+  });
+  if (!existing) {
+    throw new Error("Placement not found");
+  }
+
+  const scopeId = scopeDepartmentId(authedUser);
+  if (scopeId && existing.departmentId !== scopeId) {
+    throw new AuthorizationError("You can only manage placements within your own department.");
+  }
+
+  let newDepartmentId = existing.departmentId;
+  if (input.departmentId && input.departmentId !== existing.departmentId) {
+    const department = await prisma.department.findUnique({
+      where: { id: input.departmentId },
+    });
+    if (!department) {
+      throw new Error("Selected department does not exist");
+    }
+    newDepartmentId = department.id;
+  }
+
+  let newSupervisorId = existing.supervisorId;
+  if (input.supervisorId !== undefined) {
+    if (input.supervisorId === null || input.supervisorId === "") {
+      newSupervisorId = null;
+    } else {
+      const supervisor = await prisma.user.findFirst({
+        where: { id: input.supervisorId, role: { name: { not: "STUDENT" } } },
+      });
+      if (!supervisor) {
+        throw new Error("Selected supervisor does not exist");
+      }
+      newSupervisorId = supervisor.id;
+    }
+  }
+
+  const placement = await prisma.clinicalPlacement.update({
+    where: { id: placementId },
+    data: { departmentId: newDepartmentId, supervisorId: newSupervisorId },
+  });
+
+  await logAudit({
+    actorId: authedUser.id,
+    actorEmail: authedUser.email,
+    action: "PLACEMENT_REASSIGN",
+    entityType: "ClinicalPlacement",
+    entityId: placement.id,
+    metadata: {
+      fromDepartmentId: existing.departmentId,
+      toDepartmentId: newDepartmentId,
+      fromSupervisorId: existing.supervisorId,
+      toSupervisorId: newSupervisorId,
     },
   });
 

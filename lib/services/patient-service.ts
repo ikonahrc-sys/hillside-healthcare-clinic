@@ -5,10 +5,14 @@ import { logAudit } from "@/lib/audit/log";
 import { getActivePlacementDepartment } from "@/lib/auth/placement";
 import type { CurrentUser } from "@/lib/auth/session";
 import type { PatientInput } from "@/lib/validation/patient";
+import { formatMrn } from "@/lib/utils/mrn";
 
-export function formatMrn(mrnNumber: number): string {
-  return `P${mrnNumber.toString().padStart(5, "0")}`;
-}
+// Re-exported so every existing server-side caller can keep importing it
+// from here - moved to lib/utils/mrn.ts because it's a plain string
+// formatter with no server dependency, and a Client Component needs to use
+// it too (importing it from this file would drag in "server-only" and the
+// Postgres driver, which can't be bundled for the browser).
+export { formatMrn };
 
 export async function listPatients(user: CurrentUser | null, query?: string) {
   await authorize(user, "patient:read");

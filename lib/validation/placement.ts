@@ -23,3 +23,14 @@ export const createPlacementSchema = z
   });
 
 export type CreatePlacementInput = z.infer<typeof createPlacementSchema>;
+
+export const reassignPlacementSchema = z.object({
+  departmentId: z.string().trim().min(1, "Department is required"),
+  supervisorId: z
+    .string()
+    .trim()
+    .nullish()
+    .transform((v) => (v && v !== "" ? v : null)),
+});
+
+export type ReassignPlacementInput = z.infer<typeof reassignPlacementSchema>;

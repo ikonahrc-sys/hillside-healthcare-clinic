@@ -26,6 +26,7 @@ const PERMISSIONS = [
   { key: "user:manage", description: "Create/edit user accounts and roles" },
   { key: "placement:manage", description: "Manage student clinical placements" },
   { key: "clinical-prep:manage", description: "Create and view your own clinical preparation notes" },
+  { key: "publichealth:manage", description: "Log community outreach visits and disease surveillance cases" },
 ] as const;
 
 const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
@@ -49,6 +50,37 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   OCCUPATIONAL_THERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
   HOME_NURSING_STAFF: ["patient:read", "referral:manage", "homenursing:manage", "appointment:manage"],
   STUDENT: ["patient:read", "clinical-prep:manage"],
+  MEDICAL_DIRECTOR: [
+    "patient:read",
+    "patient:write",
+    "consultation:create",
+    "prescription:create",
+    "referral:manage",
+    "appointment:manage",
+    "placement:manage",
+  ],
+  REHABILITATION_DIRECTOR: [
+    "patient:read",
+    "referral:manage",
+    "rehab:manage",
+    "appointment:manage",
+    "placement:manage",
+  ],
+  HEAD_OF_NURSING: [
+    "patient:read",
+    "referral:manage",
+    "homenursing:manage",
+    "appointment:manage",
+    "placement:manage",
+  ],
+  HEAD_OF_PHARMACY: [
+    "patient:read",
+    "prescription:dispense",
+    "referral:manage",
+    "inventory:manage",
+    "placement:manage",
+  ],
+  PUBLIC_HEALTH_DIRECTOR: ["patient:read", "publichealth:manage", "placement:manage"],
 };
 
 const DEPARTMENTS = [
@@ -57,6 +89,7 @@ const DEPARTMENTS = [
   { name: "Pharmacy", code: "PHARM" },
   { name: "Rehabilitation", code: "REHAB" },
   { name: "Home Nursing", code: "HN" },
+  { name: "Public Health", code: "PH" },
 ] as const;
 
 const MEDICINES = [

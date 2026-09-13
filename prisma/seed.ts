@@ -18,6 +18,7 @@ const PERMISSIONS = [
   { key: "user:manage", description: "Create/edit user accounts and roles" },
   { key: "placement:manage", description: "Manage student clinical placements" },
   { key: "clinical-prep:manage", description: "Create and view your own clinical preparation notes" },
+  { key: "publichealth:manage", description: "Log community outreach visits and disease surveillance cases" },
 ] as const;
 
 const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
@@ -50,6 +51,47 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   // pending co-sign. clinical-prep:manage is different: prep notes are
   // never official, so it's a real permission grant like any other.
   STUDENT: ["patient:read", "clinical-prep:manage"],
+  // Directors/heads hold everything their department's staff role holds,
+  // plus placement:manage as the oversight extra - the same permission
+  // that already gates both the Pending Co-Signs report and placement
+  // management for Administrator, so granting it here is what opens
+  // Reports to every department head and lets them reassign/create
+  // placements (department-scoped - see placement-service.ts) without a
+  // new permission key.
+  MEDICAL_DIRECTOR: [
+    "patient:read",
+    "patient:write",
+    "consultation:create",
+    "prescription:create",
+    "referral:manage",
+    "appointment:manage",
+    "placement:manage",
+  ],
+  REHABILITATION_DIRECTOR: [
+    "patient:read",
+    "referral:manage",
+    "rehab:manage",
+    "appointment:manage",
+    "placement:manage",
+  ],
+  HEAD_OF_NURSING: [
+    "patient:read",
+    "referral:manage",
+    "homenursing:manage",
+    "appointment:manage",
+    "placement:manage",
+  ],
+  HEAD_OF_PHARMACY: [
+    "patient:read",
+    "prescription:dispense",
+    "referral:manage",
+    "inventory:manage",
+    "placement:manage",
+  ],
+  // No underlying staff role to inherit from - Public Health didn't exist
+  // before this department did, so its Director's own permission set (not
+  // "everyone else's plus extras") is the whole thing.
+  PUBLIC_HEALTH_DIRECTOR: ["patient:read", "publichealth:manage", "placement:manage"],
 };
 
 // Dev-only test accounts, one per role, so every phase can be tested as the
@@ -63,6 +105,11 @@ const TEST_USERS = [
   { email: "nurse@hillside.local", fullName: "Grace Obi", roleName: "HOME_NURSING_STAFF" },
   { email: "student@hillside.local", fullName: "Alex Torres", roleName: "STUDENT" },
   { email: "student2@hillside.local", fullName: "Jordan Reyes", roleName: "STUDENT" },
+  { email: "meddirector@hillside.local", fullName: "Dr. Elena Vasquez", roleName: "MEDICAL_DIRECTOR" },
+  { email: "rehabdirector@hillside.local", fullName: "Carlos Mendez", roleName: "REHABILITATION_DIRECTOR" },
+  { email: "nursinghead@hillside.local", fullName: "Ruth Adeyemi", roleName: "HEAD_OF_NURSING" },
+  { email: "pharmacyhead@hillside.local", fullName: "Daniel Cho", roleName: "HEAD_OF_PHARMACY" },
+  { email: "phdirector@hillside.local", fullName: "Amara Okoye", roleName: "PUBLIC_HEALTH_DIRECTOR" },
 ] as const;
 
 const DEPARTMENTS = [
@@ -71,6 +118,7 @@ const DEPARTMENTS = [
   { name: "Pharmacy", code: "PHARM" },
   { name: "Rehabilitation", code: "REHAB" },
   { name: "Home Nursing", code: "HN" },
+  { name: "Public Health", code: "PH" },
 ] as const;
 
 // A small starter catalog so prescribing is actually testable. No
@@ -152,6 +200,11 @@ async function main() {
     SPEECH_THERAPIST: "REHAB",
     OCCUPATIONAL_THERAPIST: "REHAB",
     HOME_NURSING_STAFF: "HN",
+    MEDICAL_DIRECTOR: "MED",
+    REHABILITATION_DIRECTOR: "REHAB",
+    HEAD_OF_NURSING: "HN",
+    HEAD_OF_PHARMACY: "PHARM",
+    PUBLIC_HEALTH_DIRECTOR: "PH",
   };
 
   const testUsers: string[] = [];

@@ -18,10 +18,12 @@ export function Nav({
   canManagePlacements,
   canManageClinicalPrep,
   canManageUsers,
+  canManagePublicHealth,
 }: {
   canManagePlacements: boolean;
   canManageClinicalPrep: boolean;
   canManageUsers: boolean;
+  canManagePublicHealth: boolean;
 }) {
   // "Placements" is inserted next to "Users & Roles" rather than added to
   // the static list unconditionally - it's real and permission-gated, the
@@ -35,6 +37,18 @@ export function Nav({
         ...BASE_NAV_ITEMS.slice(-2),
       ]
     : BASE_NAV_ITEMS;
+
+  // Same reasoning as Placements above - only the one role family that
+  // actually holds this permission (Public Health Director, Administrator)
+  // should ever see it, so it's inserted rather than added as a
+  // perpetual "planned" placeholder everyone else would see too.
+  if (canManagePublicHealth) {
+    items = [
+      ...items.slice(0, 3),
+      { label: "Public Health", href: "/public-health" },
+      ...items.slice(3),
+    ];
+  }
 
   if (canManageClinicalPrep) {
     items = items.map((item) =>

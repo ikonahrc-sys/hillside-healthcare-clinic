@@ -105,6 +105,8 @@ model User {
   homeVisitsCoSigned     HomeVisit[]            @relation("HomeVisitCoSigner")
   clinicalPreparationNotes ClinicalPreparationNote[] @relation("ClinicalPreparationNoteStudent")
   notifications          Notification[]
+  communityOutreachVisits CommunityOutreachVisit[] @relation("CommunityOutreachStaff")
+  surveillanceCasesReported DiseaseSurveillanceCase[] @relation("SurveillanceReporter")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -222,6 +224,7 @@ model Patient {
   homeNursingCarePlans   HomeNursingCarePlan[]
   homeVisits             HomeVisit[]
   clinicalPreparationNotes ClinicalPreparationNote[]
+  diseaseSurveillanceCases DiseaseSurveillanceCase[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -827,4 +830,59 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([recipientId, readAt])
+}
+
+// Public Health's two named activities: outreach (population-level, not
+// necessarily tied to an existing Patient record) and disease surveillance
+// (may or may not reference one). Neither fits the assessment -> treatment
+// plan -> visit shape the clinical departments use, since neither is about
+// an individual's ongoing course of care.
+model CommunityOutreachVisit {
+  id String @id @default(cuid())
+
+  staffId String
+  staff   User   @relation("CommunityOutreachStaff", fields: [staffId], references: [id])
+
+  visitDate     DateTime
+  location      String
+  activity      String
+  peopleReached Int
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([staffId])
+  @@index([visitDate])
+}
+
+enum SurveillanceCaseStatus {
+  INVESTIGATING
+  CONFIRMED
+  RESOLVED
+}
+
+model DiseaseSurveillanceCase {
+  id String @id @default(cuid())
+
+  // Optional - a community case can be logged before (or without) ever
+  // becoming one of the clinic's own Patient records.
+  patientId String?
+  patient   Patient? @relation(fields: [patientId], references: [id])
+
+  reportedByUserId String
+  reportedByUser   User   @relation("SurveillanceReporter", fields: [reportedByUserId], references: [id])
+
+  diseaseName String
+  reportDate  DateTime @default(now())
+  location    String
+  status      SurveillanceCaseStatus @default(INVESTIGATING)
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([reportedByUserId])
+  @@index([status])
 }

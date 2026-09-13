@@ -18,6 +18,7 @@ export default async function AppLayout({
   const canManagePlacements = await can(user, "placement:manage");
   const canManageClinicalPrep = await can(user, "clinical-prep:manage");
   const canManageUsers = await can(user, "user:manage");
+  const canManagePublicHealth = await can(user, "publichealth:manage");
   const unreadNotificationCount = await countUnreadNotifications(user);
 
   return (
@@ -26,6 +27,7 @@ export default async function AppLayout({
       canManagePlacements={canManagePlacements}
       canManageClinicalPrep={canManageClinicalPrep}
       canManageUsers={canManageUsers}
+      canManagePublicHealth={canManagePublicHealth}
       unreadNotificationCount={unreadNotificationCount}
     >
       {children}
