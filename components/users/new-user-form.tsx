@@ -56,9 +56,10 @@ export function NewUserForm({
           className={inputClass}
         />
         <p className="text-xs text-slate-400">
-          At least 8 characters. Share it with them directly - there is no
-          reset-by-email flow yet, so they will need you to set a new one if
-          they forget it.
+          At least 8 characters. Share it with them directly - they can
+          change it themselves afterward from My Account, or you can set a
+          new one for them from Users & Roles if they forget it. There is
+          still no reset-by-email flow.
         </p>
       </div>
 

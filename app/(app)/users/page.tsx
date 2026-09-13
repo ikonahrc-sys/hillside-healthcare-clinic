@@ -54,6 +54,12 @@ export default async function UsersPage() {
               >
                 {u.status}
               </span>
+              <Link
+                href={`/users/${u.id}/reset-password`}
+                className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Reset Password
+              </Link>
               {u.id !== user.id && (
                 <form action={setUserStatusAction}>
                   <input type="hidden" name="userId" value={u.id} />
