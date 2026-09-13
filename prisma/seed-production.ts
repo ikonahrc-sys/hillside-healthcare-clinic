@@ -44,6 +44,7 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     "prescription:dispense",
     "referral:manage",
     "inventory:manage",
+    "appointment:manage",
   ],
   PHYSIOTHERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
   SPEECH_THERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
@@ -78,9 +79,15 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     "prescription:dispense",
     "referral:manage",
     "inventory:manage",
+    "appointment:manage",
     "placement:manage",
   ],
-  PUBLIC_HEALTH_DIRECTOR: ["patient:read", "publichealth:manage", "placement:manage"],
+  PUBLIC_HEALTH_DIRECTOR: [
+    "patient:read",
+    "publichealth:manage",
+    "appointment:manage",
+    "placement:manage",
+  ],
 };
 
 const DEPARTMENTS = [

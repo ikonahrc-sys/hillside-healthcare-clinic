@@ -3,6 +3,8 @@ import {
   getMedicalSchedule,
   getRehabSchedule,
   getHomeNursingSchedule,
+  getPharmacySchedule,
+  getPublicHealthSchedule,
 } from "@/lib/services/appointment-service";
 import { listActiveDepartmentPlacements } from "@/lib/services/placement-service";
 import { DepartmentSchedule } from "@/components/dashboard/department-schedule";
@@ -28,6 +30,9 @@ const SCHEDULE_BY_ROLE: Record<
   REHABILITATION_DIRECTOR: { title: "Rehabilitation Dashboard", load: getRehabSchedule },
   HOME_NURSING_STAFF: { title: "Home Nursing Dashboard", load: getHomeNursingSchedule },
   HEAD_OF_NURSING: { title: "Home Nursing Dashboard", load: getHomeNursingSchedule },
+  PHARMACIST: { title: "Pharmacy Dashboard", load: getPharmacySchedule },
+  HEAD_OF_PHARMACY: { title: "Pharmacy Dashboard", load: getPharmacySchedule },
+  PUBLIC_HEALTH_DIRECTOR: { title: "Public Health Dashboard", load: getPublicHealthSchedule },
 };
 
 // Directors/Heads with placement:manage see a "Students in your

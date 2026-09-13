@@ -32,6 +32,8 @@ const APPOINTMENT_TYPE_LABELS: Record<string, string> = {
   SPEECH_THERAPY: "Speech therapy session",
   OCCUPATIONAL_THERAPY: "Occupational therapy session",
   HOME_NURSING_VISIT: "Home nursing visit",
+  PHARMACY_CONSULTATION: "Pharmacy consultation",
+  PUBLIC_HEALTH_VISIT: "Public health visit",
 };
 
 export type TimelineEntry = {

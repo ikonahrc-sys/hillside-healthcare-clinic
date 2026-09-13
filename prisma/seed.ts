@@ -36,6 +36,7 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     "prescription:dispense",
     "referral:manage",
     "inventory:manage",
+    "appointment:manage",
   ],
   PHYSIOTHERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
   SPEECH_THERAPIST: ["patient:read", "referral:manage", "rehab:manage", "appointment:manage"],
@@ -86,12 +87,18 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     "prescription:dispense",
     "referral:manage",
     "inventory:manage",
+    "appointment:manage",
     "placement:manage",
   ],
   // No underlying staff role to inherit from - Public Health didn't exist
   // before this department did, so its Director's own permission set (not
   // "everyone else's plus extras") is the whole thing.
-  PUBLIC_HEALTH_DIRECTOR: ["patient:read", "publichealth:manage", "placement:manage"],
+  PUBLIC_HEALTH_DIRECTOR: [
+    "patient:read",
+    "publichealth:manage",
+    "appointment:manage",
+    "placement:manage",
+  ],
 };
 
 // Dev-only test accounts, one per role, so every phase can be tested as the

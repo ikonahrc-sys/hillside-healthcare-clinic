@@ -7,24 +7,14 @@ export function HomeNursingTab({
   patientId,
   assessments,
   canCreateAssessment,
-  canScheduleAppointments,
 }: {
   patientId: string;
   assessments: Assessment[];
   canCreateAssessment: boolean;
-  canScheduleAppointments: boolean;
 }) {
   return (
     <div className="rounded border border-slate-200 bg-white p-4">
       <div className="mb-3 flex items-center justify-end gap-2">
-        {canScheduleAppointments && (
-          <Link
-            href={`/patients/${patientId}/home-nursing-appointments/new`}
-            className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700"
-          >
-            Schedule Visit
-          </Link>
-        )}
         {canCreateAssessment && (
           <Link
             href={`/patients/${patientId}/home-nursing-assessments/new`}

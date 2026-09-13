@@ -47,45 +47,55 @@ async function createAppointment(
   return appointment;
 }
 
-export async function scheduleFollowUp(
-  user: CurrentUser | null,
-  patientId: string,
-  input: ScheduleAppointmentInput,
-) {
-  const authedUser = await authorize(user, "appointment:manage");
-  return createAppointment(authedUser, patientId, "MEDICAL_FOLLOW_UP", input);
-}
-
-// A therapist's discipline maps 1:1 to their role, same as how a doctor's
-// department is always MED - no separate "pick a discipline" step needed.
-const REHAB_APPOINTMENT_TYPE_BY_ROLE: Record<string, AppointmentType> = {
-  PHYSIOTHERAPIST: "PHYSIOTHERAPY",
-  SPEECH_THERAPIST: "SPEECH_THERAPY",
-  OCCUPATIONAL_THERAPIST: "OCCUPATIONAL_THERAPY",
+// One central point for bookings: every department's staff schedule
+// through this same map + the one scheduleAppointment() below, rather
+// than each department having its own schedule*() function. A role that
+// spans multiple appointment types (e.g. a Rehab director overseeing all
+// three disciplines) gets to choose; a role with exactly one just has it
+// preselected in the form.
+const ROLE_APPOINTMENT_TYPES: Record<string, AppointmentType[]> = {
+  ADMINISTRATOR: [
+    "MEDICAL_FOLLOW_UP",
+    "PHYSIOTHERAPY",
+    "SPEECH_THERAPY",
+    "OCCUPATIONAL_THERAPY",
+    "HOME_NURSING_VISIT",
+    "PHARMACY_CONSULTATION",
+    "PUBLIC_HEALTH_VISIT",
+  ],
+  DOCTOR: ["MEDICAL_FOLLOW_UP"],
+  MEDICAL_DIRECTOR: ["MEDICAL_FOLLOW_UP"],
+  PHYSIOTHERAPIST: ["PHYSIOTHERAPY"],
+  SPEECH_THERAPIST: ["SPEECH_THERAPY"],
+  OCCUPATIONAL_THERAPIST: ["OCCUPATIONAL_THERAPY"],
+  REHABILITATION_DIRECTOR: ["PHYSIOTHERAPY", "SPEECH_THERAPY", "OCCUPATIONAL_THERAPY"],
+  HOME_NURSING_STAFF: ["HOME_NURSING_VISIT"],
+  HEAD_OF_NURSING: ["HOME_NURSING_VISIT"],
+  PHARMACIST: ["PHARMACY_CONSULTATION"],
+  HEAD_OF_PHARMACY: ["PHARMACY_CONSULTATION"],
+  PUBLIC_HEALTH_DIRECTOR: ["PUBLIC_HEALTH_VISIT"],
 };
 
-export async function scheduleTherapyAppointment(
+export async function getAvailableAppointmentTypes(
   user: CurrentUser | null,
-  patientId: string,
-  input: ScheduleAppointmentInput,
-) {
+): Promise<AppointmentType[]> {
   const authedUser = await authorize(user, "appointment:manage");
-
-  const type = REHAB_APPOINTMENT_TYPE_BY_ROLE[authedUser.role.name];
-  if (!type) {
-    throw new Error("Your role cannot schedule therapy appointments.");
-  }
-
-  return createAppointment(authedUser, patientId, type, input);
+  return ROLE_APPOINTMENT_TYPES[authedUser.role.name] ?? [];
 }
 
-export async function scheduleHomeNursingVisit(
+export async function scheduleAppointment(
   user: CurrentUser | null,
   patientId: string,
   input: ScheduleAppointmentInput,
 ) {
   const authedUser = await authorize(user, "appointment:manage");
-  return createAppointment(authedUser, patientId, "HOME_NURSING_VISIT", input);
+
+  const allowedTypes = ROLE_APPOINTMENT_TYPES[authedUser.role.name] ?? [];
+  if (!allowedTypes.includes(input.type)) {
+    throw new Error("Your role cannot schedule this type of appointment.");
+  }
+
+  return createAppointment(authedUser, patientId, input.type, input);
 }
 
 export async function listAppointmentsForPatient(
@@ -176,6 +186,37 @@ export async function getHomeNursingSchedule(user: CurrentUser | null) {
   return getScheduleWindows({
     staffId: authedUser.id,
     type: { in: ["HOME_NURSING_VISIT"] },
+    status: { notIn: ["CANCELLED", "COMPLETED"] },
+  });
+}
+
+// Department-wide like Medical, not staff-scoped like Rehab/Home Nursing -
+// pharmacy consultations are a shared queue, not one pharmacist's caseload.
+export async function getPharmacySchedule(user: CurrentUser | null) {
+  await authorize(user, "appointment:manage");
+
+  const pharmDepartment = await prisma.department.findUnique({ where: { code: "PHARM" } });
+  if (!pharmDepartment) {
+    return { today: [], tomorrow: [], upcoming: [] };
+  }
+
+  return getScheduleWindows({
+    departmentId: pharmDepartment.id,
+    status: { notIn: ["CANCELLED", "COMPLETED"] },
+  });
+}
+
+// Department-wide, same reasoning as getPharmacySchedule.
+export async function getPublicHealthSchedule(user: CurrentUser | null) {
+  await authorize(user, "appointment:manage");
+
+  const phDepartment = await prisma.department.findUnique({ where: { code: "PH" } });
+  if (!phDepartment) {
+    return { today: [], tomorrow: [], upcoming: [] };
+  }
+
+  return getScheduleWindows({
+    departmentId: phDepartment.id,
     status: { notIn: ["CANCELLED", "COMPLETED"] },
   });
 }

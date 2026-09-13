@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getPatientById, formatMrn } from "@/lib/services/patient-service";
@@ -99,14 +100,24 @@ export default async function PatientDetailPage({
 
   return (
     <div>
-      <div className="mb-4">
-        <h1 className="text-lg font-semibold text-slate-900">
-          {patient.lastName}, {patient.firstName}
-        </h1>
-        <p className="text-sm text-slate-500">
-          {formatMrn(patient.mrnNumber)} - {calculateAge(patient.dateOfBirth)}{" "}
-          years old - {patient.sex}
-        </p>
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-slate-900">
+            {patient.lastName}, {patient.firstName}
+          </h1>
+          <p className="text-sm text-slate-500">
+            {formatMrn(patient.mrnNumber)} - {calculateAge(patient.dateOfBirth)}{" "}
+            years old - {patient.sex}
+          </p>
+        </div>
+        {canManageAppointments && (
+          <Link
+            href={`/patients/${patient.id}/appointments/new`}
+            className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700"
+          >
+            Book Appointment
+          </Link>
+        )}
       </div>
 
       <PatientTabs patientId={patient.id} active={activeTab} />
@@ -117,7 +128,6 @@ export default async function PatientDetailPage({
         <ConsultationsTab
           patientId={patient.id}
           consultations={consultations}
-          canManageAppointments={canManageAppointments}
           canCreateConsultation={canCreateConsultation}
         />
       )}
@@ -142,7 +152,6 @@ export default async function PatientDetailPage({
           patientId={patient.id}
           assessments={rehabAssessments}
           canCreateAssessment={canCreateRehabAssessment}
-          canScheduleAppointments={canManageAppointments}
         />
       )}
       {activeTab === "home-nursing" && (
@@ -150,7 +159,6 @@ export default async function PatientDetailPage({
           patientId={patient.id}
           assessments={homeNursingAssessments}
           canCreateAssessment={canCreateHomeNursingAssessment}
-          canScheduleAppointments={canManageAppointments}
         />
       )}
     </div>

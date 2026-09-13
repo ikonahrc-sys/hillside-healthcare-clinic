@@ -6,25 +6,15 @@ type Consultation = Awaited<ReturnType<typeof listConsultationsForPatient>>[numb
 export function ConsultationsTab({
   patientId,
   consultations,
-  canManageAppointments,
   canCreateConsultation,
 }: {
   patientId: string;
   consultations: Consultation[];
-  canManageAppointments: boolean;
   canCreateConsultation: boolean;
 }) {
   return (
     <div className="rounded border border-slate-200 bg-white p-4">
       <div className="mb-3 flex items-center justify-end gap-2">
-        {canManageAppointments && (
-          <Link
-            href={`/patients/${patientId}/follow-up/new`}
-            className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700"
-          >
-            Schedule Follow-up
-          </Link>
-        )}
         {canCreateConsultation && (
           <Link
             href={`/patients/${patientId}/consultations/new`}
